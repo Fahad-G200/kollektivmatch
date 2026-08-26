@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<title>Nyinnflyttet? – KollektivMatch</title>
+<meta name="description" content="Samlet oversikt over strøm, internett og innboforsikring for deg som nettopp har flyttet inn i et nytt kollektiv." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          cream: '#FAF9F6', ink: '#211C33', mist: '#6B667E', line: '#E7E3F5',
+          primary: {
+            50: '#F4F2FF', 100: '#ECE7FF', 200: '#DAD0FF', 300: '#BFABFF',
+            400: '#9F7CFF', 500: '#8449FF', 600: '#6C4CE0', 700: '#5A3EC2',
+            800: '#4A349E', 900: '#3D2E7D',
+          },
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          sans: ['"Inter"', 'sans-serif'],
+        },
+        borderRadius: { '4xl': '2rem' },
+      },
+    },
+  };
+</script>
+<link rel="stylesheet" href="css/style.css?v=20260823-6" />
+</head>
+<body class="bg-cream text-ink font-sans antialiased">
+<a class="skip-link" href="#main-content">Hopp til hovedinnhold</a>
+
+<header class="sticky top-0 z-40 bg-cream/85 backdrop-blur-md border-b border-line">
+  <div class="max-w-5xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
+    <a href="index.html" class="font-display font-bold text-lg flex items-center gap-2.5">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="13" y="3" width="16" height="16" rx="5" fill="#BFABFF"/>
+        <rect x="3" y="7" width="16" height="16" rx="5" fill="#6C4CE0"/>
+      </svg>
+      KollektivMatch
+    </a>
+    <a href="index.html" class="text-sm font-semibold text-mist hover:text-ink transition-colors">← Til forsiden</a>
+  </div>
+</header>
+
+<section class="moving-in-hero-wrap" aria-labelledby="moving-in-title">
+  <div class="moving-in-hero">
+    <div class="moving-in-hero__copy">
+      <span class="moving-in-badge">
+        <span aria-hidden="true"></span>
+        Nettopp flyttet inn?
+      </span>
+      <h1 id="moving-in-title" class="moving-in-hero__title">Ny adresse.<br />En god start.</h1>
+      <p class="moving-in-hero__lead">Få oversikt over strøm, internett og innboforsikring, så dere kan bruke tiden på å gjøre kollektivet til et hjem.</p>
+      <div class="moving-in-hero__actions">
+        <a href="#flyttesjekk" class="moving-in-hero__primary">Start flyttesjekken</a>
+        <a href="safety.html" class="moving-in-hero__secondary">Se trygghetstips <span aria-hidden="true">→</span></a>
+      </div>
+      <p class="moving-in-hero__trust">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+        Nøytral oversikt uten betalte plasseringer
+      </p>
+    </div>
+    <figure class="moving-in-hero__photo">
+      <img src="assets/nyinnflyttet-hero.jpg?v=20260823-1" alt="Tre unge voksne som pakker ut flytteesker i et lyst kollektiv" width="1600" height="840" fetchpriority="high" />
+      <figcaption class="moving-in-photo-note">
+        <span class="moving-in-photo-note__icon" aria-hidden="true">✓</span>
+        <span><strong>Flytt inn med oversikt</strong><small>Tre ting å ordne først</small></span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<main id="main-content" tabindex="-1" class="max-w-5xl mx-auto px-5 md:px-8 pb-20 space-y-14">
+
+  <section id="flyttesjekk" class="moving-in-checklist" aria-labelledby="checklist-title">
+    <div>
+      <p class="section-kicker">En enkel flyttesjekk</p>
+      <h2 id="checklist-title" class="font-display font-bold text-xl md:text-2xl">Start med det viktigste</h2>
+      <p class="text-sm text-mist mt-1">Gå gjennom de tre punktene i den rekkefølgen som passer dere.</p>
+    </div>
+    <nav class="moving-in-checklist__links" aria-label="Gå til del av flyttesjekken">
+      <a href="#strom"><span>1</span> Strøm</a>
+      <a href="#internett"><span>2</span> Internett</a>
+      <a href="#innboforsikring"><span>3</span> Innboforsikring</a>
+    </nav>
+  </section>
+
+  <!-- STRØM -->
+  <section id="strom" class="scroll-mt-24">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      </div>
+      <h2 class="font-display font-bold text-xl md:text-2xl">Strøm</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/tibber.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Tibber</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på strømleverandør. Sjekk dagens pris, påslag, binding og vilkår direkte hos leverandøren.</p>
+        <a href="https://tibber.com/no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Se avtale</a>
+      </div>
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/fjordkraft.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Fjordkraft</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på strømleverandør. Sammenlign totalpris og gjeldende avtalevilkår før du velger.</p>
+        <a href="https://www.fjordkraft.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Se avtale</a>
+      </div>
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/fortum.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Fortum</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på strømleverandør. Avtaler og binding kan endres; kontroller alltid vilkårene selv.</p>
+        <a href="https://www.fortum.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Se avtale</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTERNETT -->
+  <section id="internett" class="scroll-mt-24">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a11 11 0 0 1 14 0"/><path d="M8.5 16a6 6 0 0 1 7 0"/><path d="M12 19.5h.01"/><path d="M2 8.8a16 16 0 0 1 20 0"/></svg>
+      </div>
+      <h2 class="font-display font-bold text-xl md:text-2xl">Internett</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/altibox.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Altibox</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på bredbåndsleverandør. Tilgjengelighet, hastighet og pris avhenger av adressen.</p>
+        <a href="https://www.altibox.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Sjekk dekning</a>
+      </div>
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/telenor.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Telenor</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på bredbåndsleverandør. Sjekk dekning, etablering, binding og totalpris.</p>
+        <a href="https://www.telenor.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Sjekk dekning</a>
+      </div>
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/telia.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Telia</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på bredbåndsleverandør. Produkter og vilkår kan variere med adresse og tidspunkt.</p>
+        <a href="https://www.telia.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Sjekk dekning</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- INNBOFORSIKRING -->
+  <section id="innboforsikring" class="scroll-mt-24">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      </div>
+      <h2 class="font-display font-bold text-xl md:text-2xl">Innboforsikring</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/if.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">If</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på forsikringsleverandør. Les dekning, egenandel, unntak og pris før kjøp.</p>
+        <a href="https://www.if.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Få pris</a>
+      </div>
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/gjensidige.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Gjensidige</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på forsikringsleverandør. Sammenlign dekning, egenandel og gjeldende rabatter.</p>
+        <a href="https://www.gjensidige.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Få pris</a>
+      </div>
+      <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
+        <div class="provider-card-heading">
+          <span class="provider-logo" aria-hidden="true"><img src="assets/provider-icons/tryg.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
+          <p class="font-semibold text-ink">Tryg</p>
+        </div>
+        <p class="text-sm text-mist mt-1.5 flex-1">Eksempel på forsikringsleverandør. Kontroller at valgt produkt dekker din bosituasjon.</p>
+        <a href="https://www.tryg.no" target="_blank" rel="noopener noreferrer" class="mt-4 text-center px-4 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Få pris</a>
+      </div>
+    </div>
+  </section>
+
+  <p class="text-xs text-mist text-center max-w-xl mx-auto pt-4 border-t border-line">
+    Leverandørene er nøytrale eksempler, ikke en rangering eller personlig anbefaling. KollektivMatch mottar per i dag ikke betaling for disse lenkene. Pris, dekning og vilkår kan endres; sammenlign tilbud selv før du bestiller.
+  </p>
+</main>
+
+<footer class="border-t border-line bg-white">
+  <div class="max-w-5xl mx-auto px-5 md:px-8 py-10 flex flex-col md:flex-row items-center justify-between gap-3">
+    <a href="index.html" class="font-display font-semibold text-ink flex items-center gap-2">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="13" y="3" width="16" height="16" rx="5" fill="#DAD0FF"/>
+        <rect x="3" y="7" width="16" height="16" rx="5" fill="#6C4CE0"/>
+      </svg>
+      KollektivMatch
+    </a>
+    <nav class="legal-links text-xs text-mist"><a href="privacy.html">Personvern</a><a href="terms.html">Vilkår</a><a href="safety.html">Trygg bolighandel</a></nav>
+    <p class="text-xs text-mist">© 2026 KollektivMatch</p>
+  </div>
+</footer>
+
+</body>
+</html>

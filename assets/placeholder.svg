@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
+  <title id="title">KollektivMatch reservebilde</title>
+  <desc id="desc">Et rolig lilla mønster med KollektivMatch-logo.</desc>
+  <rect width="800" height="500" fill="#F4F2FF"/>
+  <rect x="250" y="115" width="220" height="220" rx="42" fill="#DAD0FF" transform="rotate(-6 360 225)"/>
+  <rect x="352" y="155" width="220" height="220" rx="42" fill="#6C4CE0" transform="rotate(7 462 265)"/>
+  <text x="400" y="430" text-anchor="middle" fill="#3D2E7D" font-family="system-ui, sans-serif" font-size="32" font-weight="700">KollektivMatch</text>
+</svg>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<title>Min side – KollektivMatch</title>
+<meta name="description" content="Administrer profil, boligpreferanser, annonser og samtaler på KollektivMatch." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { cream: '#FAF9F6', ink: '#211C33', mist: '#6B667E', line: '#E7E3F5', primary: { 50: '#F4F2FF', 100: '#ECE7FF', 200: '#DAD0FF', 300: '#BFABFF', 400: '#9F7CFF', 500: '#8449FF', 600: '#6C4CE0', 700: '#5A3EC2', 800: '#4A349E', 900: '#3D2E7D' } },
+    fontFamily: { display: ['"Space Grotesk"', 'sans-serif'], sans: ['"Inter"', 'sans-serif'] },
+  } } };
+</script>
+<link rel="stylesheet" href="css/style.css?v=20260826-1" />
+</head>
+<body class="bg-cream text-ink font-sans antialiased min-h-screen">
+  <a class="skip-link" href="#main-content">Hopp til hovedinnhold</a>
+  <header class="sticky top-0 z-40 bg-cream/85 backdrop-blur-md border-b border-line">
+    <div class="max-w-4xl mx-auto px-5 h-16 flex items-center justify-between">
+      <a href="index.html" class="font-display font-bold text-lg flex items-center gap-2.5">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="13" y="3" width="16" height="16" rx="5" fill="#BFABFF"/><rect x="3" y="7" width="16" height="16" rx="5" fill="#6C4CE0"/></svg>
+        KollektivMatch
+      </a>
+      <div id="auth-nav"></div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1" class="max-w-4xl mx-auto px-5 py-12">
+    <div class="dashboard-welcome flex justify-between items-end mb-8 gap-4 rounded-3xl p-6 md:p-8">
+      <div>
+        <p class="section-kicker">Din plass på KollektivMatch</p>
+        <h1 class="font-display font-bold text-3xl">Min side</h1>
+        <p class="text-mist mt-1">Hold profilen oppdatert og få bedre oversikt over annonser, betalinger og samtaler.</p>
+      </div>
+      <a href="create-listing.html" class="px-5 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition-all shrink-0">+ Ny annonse</a>
+    </div>
+
+    <nav class="dashboard-shortcuts mb-10" aria-label="Snarveier på Min side">
+      <a href="#profile" class="dashboard-shortcut-card">
+        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
+        <span class="dashboard-shortcut-title">Min konto</span>
+        <span class="dashboard-shortcut-description">Profilbilde, navn og personlige opplysninger</span>
+      </a>
+      <a href="#my-listings-section" class="dashboard-shortcut-card">
+        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="dashboard-shortcut-title">Mine annonser</span>
+        <span id="shortcut-listings-summary" class="dashboard-shortcut-description">Laster annonsene dine …</span>
+      </a>
+      <a href="#conversations" class="dashboard-shortcut-card">
+        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M8 9h8M8 13h5"/></svg></span>
+        <span class="dashboard-shortcut-title">Meldinger</span>
+        <span id="shortcut-conversations-summary" class="dashboard-shortcut-description">Laster samtalene dine …</span>
+      </a>
+      <a href="#preferences" class="dashboard-shortcut-card">
+        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M7 12h10M10 18h4"/><circle cx="8" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></span>
+        <span class="dashboard-shortcut-title">Søkepreferanser</span>
+        <span class="dashboard-shortcut-description">Forbedre Smart Match og boligforslag</span>
+      </a>
+      <a href="home-seekers.html" class="dashboard-shortcut-card">
+        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 20c0-3.4 2.5-6 5.5-6s5.5 2.6 5.5 6M14 15c3.4 0 6 2 6 5"/></svg></span>
+        <span class="dashboard-shortcut-title">Finn boligsøkere</span>
+        <span class="dashboard-shortcut-description">Se hvem som matcher en aktiv annonse</span>
+      </a>
+      <a href="#vipps-verification-card" class="dashboard-shortcut-card">
+        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4.5 6v5.5c0 4.7 3.1 8 7.5 9.5 4.4-1.5 7.5-4.8 7.5-9.5V6Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span>
+        <span class="dashboard-shortcut-title">Vipps-trygghet</span>
+        <span id="shortcut-vipps-summary" class="dashboard-shortcut-description">Kontrollerer bekreftelsesstatus …</span>
+      </a>
+      <a href="#privacy-account" class="dashboard-shortcut-card">
+        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg></span>
+        <span class="dashboard-shortcut-title">Innstillinger</span>
+        <span class="dashboard-shortcut-description">Personvern, dataeksport og konto</span>
+      </a>
+    </nav>
+
+    <section id="profile" class="warm-card rounded-3xl border border-line p-6 md:p-8 mb-8 scroll-mt-24">
+      <div class="flex items-start justify-between gap-4">
+        <div><p class="section-kicker">Bli litt bedre kjent</p><h2 class="font-display font-bold text-2xl">Profilen din</h2><p class="text-sm text-mist mt-1">Profilbildet og navnet ditt kan vises på aktive annonser. Inntekt er privat, valgfritt og brukes ikke i søk eller Smart Match.</p></div>
+      </div>
+      <p id="profile-unavailable" class="hidden mt-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">De nye profilfeltene blir tilgjengelige når Vipps- og profilmigreringen er installert.</p>
+      <form id="profile-form" class="mt-6 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-7">
+        <div class="text-center">
+          <div class="profile-avatar-shell mx-auto">
+            <img id="profile-avatar" class="hidden w-full h-full object-cover" alt="Profilbildet ditt" />
+            <span id="profile-avatar-initials" aria-hidden="true">KM</span>
+          </div>
+          <label for="profile-avatar-input" class="mt-3 inline-flex cursor-pointer px-4 py-2 rounded-xl bg-white border border-line text-sm font-semibold text-primary-700 hover:bg-primary-50">Velg eller bytt bilde</label>
+          <input id="profile-avatar-input" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" />
+          <button id="profile-avatar-remove" type="button" class="hidden mt-2 mx-auto text-xs font-semibold text-red-600 hover:underline">Fjern bilde</button>
+          <p class="mt-2 text-[11px] text-mist">JPG, PNG eller WebP. Du velger utsnitt før bildet lagres.</p>
+        </div>
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label for="profile-name" class="block text-xs font-semibold text-mist mb-1">Navn</label><input id="profile-name" name="full_name" maxlength="120" class="w-full px-4 py-3 rounded-xl border border-line text-sm" /></div>
+            <div><label for="profile-occupation" class="block text-xs font-semibold text-mist mb-1">Situasjon</label><select id="profile-occupation" name="occupation" class="w-full px-4 py-3 rounded-xl border border-line bg-white text-sm"><option value="">Ikke oppgitt</option><option value="student">Student</option><option value="jobb">I jobb</option><option value="annet">Annet</option></select></div>
+          </div>
+          <div><label for="profile-institution" class="block text-xs font-semibold text-mist mb-1">Studiested eller arbeidssted (valgfritt)</label><input id="profile-institution" name="institution" maxlength="160" class="w-full px-4 py-3 rounded-xl border border-line text-sm" /></div>
+          <fieldset class="rounded-2xl bg-white/70 border border-line p-4">
+            <legend class="px-1 text-xs font-semibold text-mist">Omtrent inntekt (valgfritt og privat)</legend>
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-3 mt-1">
+              <div><label for="profile-income" class="sr-only">Omtrent inntekt i kroner</label><input id="profile-income" name="income_amount" type="number" min="1" max="100000000" step="1" inputmode="numeric" placeholder="Beløp i kroner" class="w-full px-4 py-3 rounded-xl border border-line text-sm" /></div>
+              <div><label for="profile-income-period" class="sr-only">Periode for inntekt</label><select id="profile-income-period" name="income_period" class="w-full px-4 py-3 rounded-xl border border-line bg-white text-sm"><option value="month">Per måned</option><option value="year">Per år</option><option value="hour">Per time</option></select></div>
+            </div>
+            <p class="text-xs text-mist mt-2">Dette er bare en personlig profilopplysning for deg. Den vises ikke til utleiere og påvirker ikke søkeresultatene.</p>
+          </fieldset>
+          <button id="profile-submit" type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold text-sm disabled:opacity-60">Lagre profil</button>
+        </div>
+      </form>
+
+      <div id="vipps-verification-card" class="vipps-verification-card mt-7 scroll-mt-24" aria-live="polite">
+        <div class="vipps-verification-icon" aria-hidden="true">✓</div>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <h3 class="font-bold">Bekreft kontoen med Vipps</h3>
+            <span id="vipps-verification-status" class="trust-status-badge">Ikke bekreftet</span>
+          </div>
+          <p id="vipps-verification-description" class="text-sm text-mist mt-1">Koble den innloggede kontoen til din Vipps-konto for å gi andre mer trygghet på annonser og i samtaler.</p>
+          <p class="text-[11px] text-mist mt-2">Vi lagrer bare en teknisk Vipps-ID og tidspunktet for koblingen. Dette er ikke BankID eller elektronisk ID.</p>
+          <p id="vipps-verification-note" class="hidden text-xs text-amber-800 mt-2"></p>
+        </div>
+        <button id="start-vipps-verification" type="button" class="vipps-button shrink-0 rounded-xl px-5 py-3 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed">Bekreft med Vipps</button>
+      </div>
+
+      <div id="account-trust-card" class="account-trust-card mt-4" aria-live="polite">
+        <div class="account-trust-icon" aria-hidden="true">@</div>
+        <div class="min-w-0 flex-1">
+          <h3 class="font-bold">Andre trygghetssignaler</h3>
+          <p class="text-sm text-mist mt-1">Disse brukes som et tydelig alternativ mens Vipps ikke er aktivert.</p>
+          <div class="account-trust-statuses mt-3">
+            <div><span id="email-confirmation-status" class="trust-status-badge">Kontrollerer e-post …</span><span class="text-xs text-mist">Bekreftet innloggingsadresse</span></div>
+            <div><span id="education-email-status" class="trust-status-badge">Ikke bekreftet</span><span class="text-xs text-mist">Utdannings-e-post</span></div>
+          </div>
+          <p class="text-[11px] text-mist mt-3">Vanlig e-postbekreftelse vises bare til deg. Merket «Bekreftet utdannings-e-post» vises på annonser og i samtaler når en støttet skoleadresse er bekreftet. Ingen av merkene er BankID eller legitimasjonskontroll.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="preferences" class="bg-white rounded-3xl border border-line p-6 md:p-8 mb-12 scroll-mt-24">
+      <h2 class="font-display font-bold text-2xl">Smart Match-preferanser</h2>
+      <p class="text-sm text-mist mt-1 mb-5">Fyll ut minst to felt for å få en meningsfull matchprosent.</p>
+      <p id="preferences-unavailable" class="hidden mb-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">Smart Match-preferanser blir tilgjengelige når databasemigreringen er installert.</p>
+      <form id="preferences-form" class="space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="preference-budget" class="block text-xs font-semibold text-mist mb-1">Maks budsjett per måned</label>
+            <input id="preference-budget" name="monthly_budget_max" type="number" min="1" max="1000000" step="100" class="w-full px-4 py-3 rounded-xl border border-line text-sm" />
+          </div>
+          <div>
+            <label for="preference-move-in" class="block text-xs font-semibold text-mist mb-1">Ønsket innflyttingsdato</label>
+            <input id="preference-move-in" name="desired_move_in_date" type="date" class="w-full px-4 py-3 rounded-xl border border-line text-sm" />
+          </div>
+        </div>
+
+        <div>
+          <label for="preference-location" class="block text-xs font-semibold text-mist mb-1">Ønsket by eller område</label>
+          <input id="preference-location" name="search_location" maxlength="100" placeholder="F.eks. Oslo eller Majorstuen" class="w-full px-4 py-3 rounded-xl border border-line text-sm" />
+        </div>
+
+        <fieldset>
+          <legend class="text-xs font-semibold text-mist mb-2">Ønsket boligtype</legend>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_property_types" value="leilighet" class="accent-primary-600" />Leilighet</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_property_types" value="hybel" class="accent-primary-600" />Hybel</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_property_types" value="enebolig" class="accent-primary-600" />Enebolig</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_property_types" value="rekkehus" class="accent-primary-600" />Rekkehus</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_property_types" value="studentbolig" class="accent-primary-600" />Studentbolig</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_property_types" value="annet" class="accent-primary-600" />Annet</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend class="text-xs font-semibold text-mist mb-2">Viktigst for deg (maks 3)</legend>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="stort-rom" class="accent-primary-600" />Stort rom / plass</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="moderne-stil" class="accent-primary-600" />Moderne stil</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="nyoppusset-bad" class="accent-primary-600" />Fint bad</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="rolig-miljo" class="accent-primary-600" />Rolig miljø</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="stort-kjokken" class="accent-primary-600" />Stort kjøkken / sosiale soner</label>
+          </div>
+        </fieldset>
+
+        <fieldset id="home-seeker-sharing" class="home-seeker-opt-in rounded-2xl border border-line p-5">
+          <legend class="px-1 text-sm font-bold">La utleiere finne deg</legend>
+          <p class="text-sm text-mist mt-1">Helt frivillig. Bare innloggede eiere av aktive annonser kan se den begrensede boligsøkerprofilen og kontakte deg om en konkret annonse.</p>
+          <label for="seeker-bio" class="block text-xs font-semibold text-mist mt-4 mb-1">Kort presentasjon (valgfritt)</label>
+          <textarea id="seeker-bio" name="seeker_bio" maxlength="300" rows="3" placeholder="Fortell kort hva slags hjem og kollektiv du ser etter." class="w-full px-4 py-3 rounded-xl border border-line text-sm"></textarea>
+          <label class="mt-4 flex items-start gap-3 rounded-xl bg-white/80 border border-line p-4 cursor-pointer">
+            <input id="home-seeker-visible" name="home_seeker_visible" type="checkbox" class="mt-1 accent-primary-600" />
+            <span><strong class="block text-sm">Vis meg som boligsøker</strong><span class="block text-xs text-mist mt-1">Navn, profilbilde, situasjon, valgfritt studiested/arbeidssted, presentasjon og boligpreferanser kan vises. E-post, telefon og inntekt vises aldri.</span></span>
+          </label>
+          <p id="home-seeker-unavailable" class="hidden mt-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900" role="status">Denne funksjonen blir tilgjengelig når migreringen for boligsøkerprofiler er installert.</p>
+        </fieldset>
+        <button id="preferences-submit" type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold text-sm disabled:opacity-60">Lagre preferanser</button>
+      </form>
+    </section>
+
+    <section id="my-listings-section" class="scroll-mt-24">
+      <div class="flex items-end justify-between mb-4 gap-4"><div><h2 class="font-display font-bold text-2xl">Mine annonser</h2><p class="text-sm text-mist">Administrer annonsene eller kjøp tydelig merket plassering i standardvisningen.</p></div></div>
+      <div id="my-listings" class="grid gap-6"><div class="text-center py-20 text-mist">Laster annonsene dine …</div></div>
+    </section>
+
+    <section id="boost-payments" class="mt-12">
+      <div class="flex items-center justify-between mb-4"><div><h2 class="font-display font-bold text-2xl">Fremhevingskjøp</h2><p class="text-sm text-mist">Betalingsbekreftelser og status for dine egne kjøp.</p></div></div>
+      <div id="boost-orders" class="grid gap-3"><div class="text-center py-10 text-mist bg-white rounded-2xl border border-line">Laster betalinger …</div></div>
+    </section>
+
+    <section id="conversations" class="mt-12 scroll-mt-24">
+      <div class="flex items-center justify-between mb-4"><h2 class="font-display font-bold text-2xl">Siste samtaler</h2></div>
+      <div id="my-conversations" class="grid gap-4"><div class="text-center py-10 text-mist bg-white rounded-2xl border border-line">Laster samtaler …</div></div>
+    </section>
+
+    <section id="privacy-account" class="mt-12 bg-white rounded-3xl border border-line p-6 md:p-8 scroll-mt-24">
+      <h2 class="font-display font-bold text-2xl">Personvern og konto</h2>
+      <p class="text-sm text-mist mt-1">Last ned opplysningene dine, eller slett kontoen og innholdet permanent.</p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <button id="export-data-btn" type="button" class="px-5 py-2.5 rounded-xl bg-primary-50 text-primary-700 font-semibold text-sm hover:bg-primary-100 disabled:opacity-60">Last ned mine data</button>
+        <a href="privacy.html" class="px-5 py-2.5 rounded-xl border border-line text-mist font-semibold text-sm hover:bg-primary-50">Les personvernerklæringen</a>
+      </div>
+      <form id="delete-account-form" class="mt-7 pt-6 border-t border-line max-w-lg">
+        <h3 class="font-bold text-red-700">Slett konto permanent</h3>
+        <p class="text-sm text-mist mt-1">Dette sletter konto, profil, profilbilde, annonser, annonsebilder, annonsevideoer, meldinger og rapporter. Betalingsopplysninger som må beholdes av regnskaps- eller dokumentasjonsgrunner anonymiseres fra kontoen og oppbevares etter gjeldende frister. Handlingen kan ikke angres.</p>
+        <label for="delete-confirmation" class="block text-xs font-semibold text-mist mt-4 mb-1">Skriv SLETT for å bekrefte</label>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input id="delete-confirmation" name="confirmation" required autocomplete="off" pattern="SLETT" placeholder="SLETT" class="flex-1 px-4 py-2.5 rounded-xl border border-line text-sm" />
+          <button id="delete-account-btn" type="submit" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm disabled:opacity-60">Slett kontoen</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="avatar-crop-dialog" class="avatar-crop-dialog w-[min(94vw,520px)] rounded-3xl p-0">
+    <div class="bg-white rounded-3xl overflow-hidden">
+      <div class="p-6 md:p-8 pb-4 flex items-start justify-between gap-4">
+        <div><p class="section-kicker">Profilbilde</p><h2 class="font-display font-bold text-2xl">Velg utsnitt</h2><p class="text-sm text-mist mt-1">Dra bildet og bruk zoom til ansiktet vises slik du ønsker i sirkelen.</p></div>
+        <button id="avatar-crop-close" type="button" class="w-9 h-9 rounded-full bg-primary-50 border border-line text-mist hover:text-ink" aria-label="Lukk bilderedigering">×</button>
+      </div>
+      <div class="px-6 md:px-8 pb-6 md:pb-8">
+        <div class="avatar-crop-stage mx-auto">
+          <canvas id="avatar-crop-canvas" width="512" height="512" tabindex="0" role="img" aria-label="Forhåndsvisning av profilbildet. Dra for å flytte utsnittet."></canvas>
+        </div>
+        <div class="mt-6">
+          <div class="flex items-center justify-between gap-3 text-xs font-semibold text-mist"><label for="avatar-crop-zoom">Zoom</label><button id="avatar-crop-reset" type="button" class="text-primary-700 hover:underline">Tilbakestill</button></div>
+          <input id="avatar-crop-zoom" type="range" min="1" max="3" step="0.01" value="1" class="avatar-crop-zoom mt-2 w-full" />
+        </div>
+        <p class="text-[11px] text-mist mt-3">Tips: Du kan også bruke piltastene for finjustering når forhåndsvisningen er valgt.</p>
+        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <button id="avatar-crop-cancel" type="button" class="px-5 py-2.5 rounded-xl border border-line text-sm font-semibold text-mist hover:bg-primary-50">Avbryt</button>
+          <button id="avatar-crop-save" type="button" class="px-5 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-60">Lagre profilbilde</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="boost-modal" class="boost-dialog w-[min(94vw,620px)] rounded-3xl p-0 backdrop:bg-ink/45">
+    <form id="boost-form" class="bg-white rounded-3xl overflow-hidden">
+      <div class="boost-modal-header p-6 md:p-8">
+        <div class="flex items-start justify-between gap-4">
+          <div><p class="section-kicker">Kjøpt plassering</p><h2 class="font-display font-bold text-2xl">Fremhev annonsen</h2><p id="boost-listing-title" class="text-sm text-mist mt-1"></p></div>
+          <button id="boost-close" type="button" class="w-9 h-9 rounded-full bg-white/80 border border-line text-mist hover:text-ink" aria-label="Lukk betalingsvindu">×</button>
+        </div>
+        <p class="mt-4 text-sm text-mist">Annonsen vises høyere i standardvisningen og merkes tydelig «Fremhevet · kjøpt plassering». Fremheving gir bedre synlighet, men garanterer ikke visninger, meldinger eller leietaker.</p>
+      </div>
+      <div class="p-6 md:p-8 pt-5 space-y-5">
+        <fieldset><legend class="text-sm font-bold mb-3">Velg pakke</legend><div id="boost-products" class="grid sm:grid-cols-2 gap-3"><p class="text-sm text-mist">Laster pakker …</p></div></fieldset>
+        <div class="rounded-2xl bg-[#FAF9F6] border border-line px-4 py-3 flex items-center justify-between"><span class="text-sm font-semibold">Totalpris</span><strong id="boost-total" class="text-xl text-primary-700">–</strong></div>
+        <label class="flex items-start gap-3 text-sm text-mist"><input id="boost-terms" name="accepted_terms" type="checkbox" required class="mt-1 accent-primary-600" /><span>Jeg godtar valgt pris og varighet, at fremhevingen starter straks etter bekreftet betaling, <a href="terms.html#paid-placement" target="_blank" class="text-primary-700 underline">kjøps- og refusjonsvilkårene</a> og <a href="privacy.html#payments" target="_blank" class="text-primary-700 underline">personvernerklæringen</a>.</span></label>
+        <p id="boost-error" class="hidden rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert"></p>
+        <fieldset><legend class="text-sm font-bold mb-3">Betalingsmåte</legend><div id="boost-payment-methods" class="grid sm:grid-cols-2 gap-3"><p class="text-sm text-mist">Kontrollerer tilgjengelige betalingsmåter …</p></div></fieldset>
+        <p id="boost-availability-note" class="hidden rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">Betaling må først kobles til en godkjent betalingskonto.</p>
+        <button id="boost-pay" type="submit" class="vipps-button w-full rounded-xl px-5 py-3.5 font-bold disabled:opacity-60">Gå til sikker betaling</button>
+        <p id="boost-provider-note" class="text-center text-[11px] text-mist">Du sendes til betalingsleverandørens sikre betalingsside. Annonsen fremheves først etter serverbekreftet betaling.</p>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="border-t border-line bg-white"><div class="max-w-4xl mx-auto px-5 py-6 text-xs text-mist flex flex-wrap justify-between gap-4"><span>© 2026 KollektivMatch</span><nav class="legal-links"><a href="privacy.html">Personvern</a><a href="terms.html">Vilkår</a><a href="safety.html">Trygg bolighandel</a></nav></div></footer>
+
+  <div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col items-end" aria-live="polite"></div>
+  <script type="module" src="dashboard.js?v=20260826-2"></script>
+</body>
+</html>

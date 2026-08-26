@@ -1,0 +1,16 @@
+-- KollektivMatch – sikker inngang for eksisterende database
+--
+-- Denne filen sletter ingenting. Kjør de daterte migreringene i denne rekkefølgen:
+--   migrations/2026-08-23_kollektivmatch_hardening.sql
+--   migrations/2026-08-23_real_vipps_boost.sql
+--   migrations/2026-08-23_vipps_account_verification.sql
+--   migrations/2026-08-25_listing_video.sql
+--   migrations/2026-08-25_school_proximity.sql
+--   migrations/2026-08-25_unlimited_listing_images.sql
+--   migrations/2026-08-25_security_advisor_fixes.sql
+--   migrations/2026-08-26_home_seeker_profiles.sql
+--   migrations/2026-08-26_stripe_boost_fallback.sql
+--
+-- En full førstegangsinstallasjon som SLETTER ALLE DATA ligger bevisst i:
+--   schema_fresh_install_DELETES_ALL_DATA.sql
+-- Les README.md før du kjører SQL i Supabase.

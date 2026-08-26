@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<title>KollektivMatch – Finn ditt neste kollektiv</title>
+<meta name="description" content="Finn ledige rom og kollektiv i Norge. Søk, filtrer og kontakt utleier på ett sted." />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          cream: '#FAF9F6',
+          ink: '#211C33',
+          mist: '#6B667E',
+          line: '#E7E3F5',
+          primary: {
+            50: '#F4F2FF', 100: '#ECE7FF', 200: '#DAD0FF', 300: '#BFABFF',
+            400: '#9F7CFF', 500: '#8449FF', 600: '#6C4CE0', 700: '#5A3EC2',
+            800: '#4A349E', 900: '#3D2E7D',
+          },
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          sans: ['"Inter"', 'sans-serif'],
+        },
+        borderRadius: { '4xl': '2rem' },
+      },
+    },
+  };
+</script>
+<link rel="stylesheet" href="css/style.css?v=20260826-1" />
+</head>
+<body class="bg-cream text-ink font-sans antialiased">
+<a class="skip-link" href="#feed">Hopp til hovedinnhold</a>
+
+<!-- ============ HEADER ============ -->
+<header class="sticky top-0 z-40 bg-cream/85 backdrop-blur-md border-b border-line">
+  <div class="max-w-7xl mx-auto px-3 sm:px-5 md:px-8 h-16 flex items-center justify-between">
+    <a href="index.html" class="font-display font-bold text-lg flex items-center gap-2.5 shrink-0">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="13" y="3" width="16" height="16" rx="5" fill="#BFABFF"/>
+        <rect x="3" y="7" width="16" height="16" rx="5" fill="#6C4CE0"/>
+      </svg>
+      <span class="brand-name">KollektivMatch</span>
+    </a>
+
+    <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-mist">
+      <a href="index.html#feed" class="hover:text-ink transition-colors">Finn bolig</a>
+      <a href="create-listing.html" class="hover:text-ink transition-colors">Legg ut annonse</a>
+      <a href="home-seekers.html" class="hover:text-ink transition-colors">Finn boligsøkere</a>
+      <a href="moving-in.html" class="hover:text-ink transition-colors">Nyinnflyttet?</a>
+    </nav>
+
+    <div class="flex items-center gap-1 sm:gap-2">
+      <div id="auth-buttons" class="flex items-center gap-0 sm:gap-1">
+        <button type="button" id="open-login" class="px-2 sm:px-4 py-2 text-sm font-semibold text-ink hover:text-primary-600 transition-colors">Logg inn</button>
+        <button type="button" id="open-register" class="px-3 sm:px-4 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-full transition-colors">Registrer deg</button>
+      </div>
+      <div id="user-menu" class="hidden items-center gap-3">
+        <a href="dashboard.html" class="text-sm font-semibold text-ink hover:text-primary-600 transition-colors">Min side</a>
+        <button type="button" id="logout-btn" class="px-4 py-2 text-sm font-semibold text-mist hover:text-red-500 transition-colors">Logg ut</button>
+      </div>
+      <button type="button" id="mobile-menu-btn" class="md:hidden p-1.5 sm:p-2 text-ink" aria-label="Åpne meny" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <nav id="mobile-menu" class="hidden md:hidden flex flex-col gap-1 px-5 pb-4 text-sm font-medium text-mist border-t border-line pt-3">
+    <a href="index.html#feed" class="py-2">Finn bolig</a>
+    <a href="create-listing.html" class="py-2">Legg ut annonse</a>
+    <a href="home-seekers.html" class="py-2">Finn boligsøkere</a>
+    <a href="moving-in.html" class="py-2">Nyinnflyttet?</a>
+  </nav>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="relative overflow-hidden">
+  <!-- Signaturgrafikk: overlappende "rom" – samme formspråk som logoen -->
+  <svg class="hidden md:block absolute -top-16 -right-24 w-[440px] h-[440px] pointer-events-none" viewBox="0 0 520 520" fill="none" aria-hidden="true">
+    <rect x="70" y="60" width="150" height="150" rx="26" fill="#ECE7FF" transform="rotate(-8 145 135)"/>
+    <rect x="230" y="30" width="190" height="190" rx="30" fill="#DAD0FF" transform="rotate(6 325 125)"/>
+    <rect x="160" y="210" width="210" height="210" rx="34" fill="#BFABFF" transform="rotate(-4 265 315)"/>
+    <rect x="300" y="260" width="170" height="170" rx="28" fill="#6C4CE0" transform="rotate(9 385 345)"/>
+  </svg>
+
+  <div class="relative max-w-3xl mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-12 text-center">
+    <span class="inline-flex items-center gap-2 bg-white border border-line rounded-full pl-2.5 pr-4 py-1.5 text-xs font-semibold text-mist mb-6">
+      <span class="w-1.5 h-1.5 rounded-full bg-primary-600"></span>
+      Bygget for studenter og unge i Norge
+    </span>
+    <h1 class="font-display font-bold text-4xl md:text-6xl leading-[1.1] text-ink text-balance">
+      Finn et sted å bo –<br class="hidden md:block" />
+      og mennesker å <span class="text-primary-600">trives</span> med.
+    </h1>
+    <p class="mt-5 text-lg text-mist max-w-xl mx-auto">
+      Et varmt og oversiktlig sted for å finne rom, bli kjent med kollektivet og ta tryggere kontakt.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="#feed" class="w-full sm:w-auto px-7 py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-full shadow-lg shadow-primary-600/20 transition-all hover:-translate-y-0.5">
+        Se ledige rom
+      </a>
+      <a href="create-listing.html" class="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-primary-50 text-ink font-semibold rounded-full border border-line transition-all">
+        Legg ut annonse
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TILLIT ============ -->
+<section class="max-w-5xl mx-auto px-5 md:px-8 pb-16">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
+      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-ink">Tryggere kontakt</p>
+        <p class="text-xs text-mist mt-0.5">Bekreftet e-post og rapportering gir bedre sikkerhet, men sjekk alltid annonsen selv</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
+      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-ink">Ett sted, ikke tjue tråder</p>
+        <p class="text-xs text-mist mt-0.5">Søk og filtrer i stedet for å scrolle gjennom Facebook</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
+      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M15.8 14.2c2.7.4 4.7 2.5 4.7 5.3"/></svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-ink">Gratis å søke bolig</p>
+        <p class="text-xs text-mist mt-0.5">Boligjegere betaler aldri noe for å bruke KollektivMatch</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FILTER ============ -->
+<section class="max-w-6xl mx-auto px-5 md:px-8">
+  <form id="filter-form" class="bg-white rounded-2xl border border-line p-4 md:p-5 space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:items-end">
+      <div>
+        <label for="f-city" class="text-xs font-semibold text-mist mb-1 block">By / område</label>
+        <input id="f-city" type="text" name="city" list="city-suggestions" autocomplete="off" placeholder="F.eks. Oslo, Bergen ..."
+               class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm text-ink placeholder:text-mist/70 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+        <datalist id="city-suggestions"></datalist>
+      </div>
+      <div>
+        <label for="f-price" class="text-xs font-semibold text-mist mb-1 block">Maks pris / mnd</label>
+        <input id="f-price" type="number" name="maxPrice" placeholder="F.eks. 8000" min="0"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm text-ink placeholder:text-mist/70 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      </div>
+      <div>
+        <label for="f-date" class="text-xs font-semibold text-mist mb-1 block">Innflyttingsdato</label>
+        <input id="f-date" type="date" name="moveInDate"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      </div>
+      <div>
+        <label for="f-sort" class="text-xs font-semibold text-mist mb-1 block">Sorter etter</label>
+        <select id="f-sort" name="sortBy"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm bg-white text-ink focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+          <option value="best_match">Beste match</option>
+          <option value="newest">Nyeste</option>
+          <option value="price_low">Lavest pris</option>
+          <option value="price_high">Høyest pris</option>
+          <option value="move_in_soon">Tidligst innflytting</option>
+          <option value="nearest_school">Nærmest valgt skole</option>
+        </select>
+      </div>
+    </div>
+
+    <details id="advanced-filters" class="filter-details rounded-2xl border border-line bg-[#FCFBFF]">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-ink hover:bg-primary-50/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30">
+        <span class="flex items-center gap-2.5">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-primary-50 text-primary-700" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          </span>
+          Flere filtre
+        </span>
+        <span class="flex items-center gap-2 text-xs font-semibold text-mist"><span id="advanced-filter-count">Ingen valgt</span><svg class="filter-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+      </summary>
+      <div class="space-y-4 border-t border-line p-4">
+    <div class="rounded-2xl border border-primary-100 bg-gradient-to-r from-primary-50/80 to-[#FFF8F2] p-4">
+      <div class="flex items-start gap-3">
+        <span class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-primary-700 shadow-sm" aria-hidden="true">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-5 9 5-9 5-9-5Z"/><path d="M7 12.5V17c2.6 2 7.4 2 10 0v-4.5"/><path d="M21 10v6"/></svg>
+        </span>
+        <div class="min-w-0 flex-1">
+          <label for="f-school" class="block text-sm font-bold text-ink">Skole eller studiested <span class="font-normal text-mist">(valgfritt)</span></label>
+          <p class="mt-0.5 text-xs text-mist">Velg et forslag for å se omtrentlig avstand og la Smart Match prioritere boliger i nærheten.</p>
+          <div class="relative mt-3 max-w-xl">
+            <div class="flex rounded-xl border border-line bg-white focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20">
+              <input id="f-school" name="schoolName" type="text" maxlength="100" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="school-suggestions" aria-expanded="false" placeholder="F.eks. Universitetet i Oslo"
+                     class="min-w-0 flex-1 rounded-l-xl px-3.5 py-2.5 text-sm text-ink placeholder:text-mist/70 focus:outline-none" />
+              <button id="clear-school" type="button" class="hidden shrink-0 px-3 text-xs font-semibold text-mist hover:text-ink" aria-label="Fjern valgt skole">Fjern</button>
+            </div>
+            <div id="school-suggestions" role="listbox" class="absolute left-0 right-0 top-full z-30 mt-1 hidden max-h-64 overflow-y-auto rounded-xl border border-line bg-white p-1 shadow-xl"></div>
+          </div>
+          <input id="f-school-lat" name="schoolLat" type="hidden" />
+          <input id="f-school-lon" name="schoolLon" type="hidden" />
+          <p id="school-search-status" class="mt-2 text-xs text-mist" aria-live="polite">Skolefeltet kan stå tomt. Avstand er luftlinje fra annonsens oppgitte område, ikke reisetid.</p>
+          <p class="mt-1 text-[11px] text-mist/80">Stedsdata fra <a href="https://www.kartverket.no/api-og-data/stedsnavndata" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary-700 hover:underline">Kartverket</a>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div>
+        <label for="f-property-type" class="text-xs font-semibold text-mist mb-1 block">Boligtype</label>
+        <select id="f-property-type" name="propertyType"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm bg-white text-ink focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+          <option value="">Alle boligtyper</option>
+          <option value="leilighet">Leilighet</option>
+          <option value="hybel">Hybel</option>
+          <option value="enebolig">Enebolig</option>
+          <option value="rekkehus">Rekkehus</option>
+          <option value="studentbolig">Studentbolig</option>
+          <option value="annet">Annet</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-occupation" class="text-xs font-semibold text-mist mb-1 block">Passer best for</label>
+        <select id="f-occupation" name="preferredOccupation"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm bg-white text-ink focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+          <option value="">Alle</option>
+          <option value="student">Student</option>
+          <option value="jobb">I jobb</option>
+          <option value="annet">Annet</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-transit" class="text-xs font-semibold text-mist mb-1 block">Maks min til kollektivtransport</label>
+        <input id="f-transit" type="number" name="maxTransitMinutes" min="0" placeholder="F.eks. 7"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm text-ink placeholder:text-mist/70 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      </div>
+      <fieldset class="rounded-xl border border-line px-3 py-2">
+        <legend class="px-1 text-xs font-semibold text-mist">Fasiliteter</legend>
+        <div class="grid grid-cols-2 gap-1 text-xs text-ink">
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="amenities" value="matbutikk" class="accent-primary-600" />Matbutikk</label>
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="amenities" value="kollektivtransport" class="accent-primary-600" />Kollektivt</label>
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="amenities" value="treningssenter" class="accent-primary-600" />Trening</label>
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="amenities" value="grontomrade" class="accent-primary-600" />Grøntområde</label>
+        </div>
+      </fieldset>
+      <fieldset class="rounded-xl border border-line px-3 py-2">
+        <legend class="px-1 text-xs font-semibold text-mist">Boligkvaliteter</legend>
+        <div class="grid grid-cols-2 gap-1 text-xs text-ink">
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="nyoppusset-bad" class="accent-primary-600" />Pent bad</label>
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="stort-kjokken" class="accent-primary-600" />Sosiale soner</label>
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="rolig-miljo" class="accent-primary-600" />Rolig miljø</label>
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="stort-rom" class="accent-primary-600" />Stort rom</label>
+        </div>
+      </fieldset>
+    </div>
+      </div>
+    </details>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors">
+        Søk smartere
+      </button>
+      <button type="button" id="reset-filters" class="px-4 py-2.5 text-sm font-semibold text-mist hover:text-ink rounded-xl transition-colors">Nullstill filtre</button>
+    </div>
+    <div id="active-filters" class="hidden flex flex-wrap gap-2" aria-live="polite"></div>
+    <p class="text-[11px] leading-relaxed text-mist">Matchprosenten er en veiledende rangering basert på filtrene i dette søket, øvrige lagrede preferanser og tilgjengelige annonsedata. Valgte filtre overstyrer samme valg i profilen. Prosenten er ikke en garanti eller en automatisk beslutning.</p>
+    <p id="advanced-filters-unavailable" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">Avanserte bolig- og matchfiltre blir tilgjengelige når databasemigreringen er installert. Sted, pris, dato og sortering virker fortsatt.</p>
+  </form>
+</section>
+
+<!-- ============ FEED ============ -->
+<main id="feed" tabindex="-1" class="max-w-6xl mx-auto px-5 md:px-8 pt-12 pb-20 scroll-mt-20">
+  <section id="featured-results" class="hidden mb-10" aria-labelledby="featured-results-title">
+    <div class="flex flex-wrap items-end justify-between gap-2 mb-4">
+      <div><p class="section-kicker">Kjøpt plassering</p><h2 id="featured-results-title" class="font-display font-bold text-2xl text-ink">Fremhevede annonser</h2><p class="text-sm text-mist">Betalt synlighet – ikke en Smart Match-anbefaling.</p></div>
+    </div>
+    <div id="featured-listings-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+  </section>
+  <div class="flex flex-wrap items-baseline justify-between gap-2 mb-6">
+    <h2 class="font-display font-bold text-2xl md:text-3xl text-ink">Ledige rom akkurat nå</h2>
+    <span id="results-summary" class="text-sm text-mist" aria-live="polite">Laster annonser …</span>
+  </div>
+  <div id="listings-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- Fylles av js/feed.js -->
+  </div>
+  <div class="text-center mt-8">
+    <button id="load-more-btn" type="button" class="hidden px-6 py-3 bg-white border border-line text-primary-700 font-semibold rounded-xl hover:bg-primary-50 transition-colors">Vis flere</button>
+  </div>
+</main>
+
+<!-- ============ CTA-BANNER ============ -->
+<section class="max-w-6xl mx-auto px-5 md:px-8 pb-20">
+  <div class="bg-primary-600 rounded-4xl px-6 py-10 md:px-14 md:py-14 text-center relative overflow-hidden">
+    <svg class="absolute -bottom-6 -left-6 w-40 h-40 opacity-20" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+      <rect x="10" y="20" width="55" height="55" rx="14" fill="white" transform="rotate(-6 37 47)"/>
+      <rect x="35" y="10" width="55" height="55" rx="14" fill="white" transform="rotate(8 62 37)"/>
+    </svg>
+    <h3 class="relative font-display font-bold text-2xl md:text-3xl text-white">Har du et ledig rom?</h3>
+    <p class="relative text-primary-100 mt-2 max-w-md mx-auto">Legg ut annonsen din enkelt, og nå relevante boligjegere på plattformen.</p>
+    <a href="create-listing.html" class="relative inline-block mt-6 px-7 py-3 bg-white text-primary-700 font-semibold rounded-full hover:bg-primary-50 transition-colors">
+      Legg ut annonse gratis
+    </a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t border-line bg-white">
+  <div class="max-w-6xl mx-auto px-5 md:px-8 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
+    <a href="index.html" class="font-display font-semibold text-ink flex items-center gap-2">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="13" y="3" width="16" height="16" rx="5" fill="#DAD0FF"/>
+        <rect x="3" y="7" width="16" height="16" rx="5" fill="#6C4CE0"/>
+      </svg>
+      KollektivMatch
+    </a>
+    <nav class="legal-links text-xs text-mist" aria-label="Juridisk og sikkerhet">
+      <a href="privacy.html">Personvern</a>
+      <a href="terms.html">Vilkår</a>
+      <a href="safety.html">Trygg bolighandel</a>
+    </nav>
+    <p class="text-xs text-mist">© 2026 KollektivMatch</p>
+  </div>
+</footer>
+
+<!-- ============ TOAST-CONTAINER ============ -->
+<div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col items-end" aria-live="polite"></div>
+
+<!-- ============ AUTH-MODAL ============ -->
+<div id="auth-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div id="auth-modal-backdrop" class="absolute inset-0 bg-ink/40 backdrop-blur-sm"></div>
+  <div class="relative bg-white w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-3xl shadow-2xl p-7" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+    <button type="button" id="close-auth-modal" class="absolute top-5 right-5 text-mist hover:text-ink" aria-label="Lukk">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h2 id="auth-modal-title" class="sr-only">Logg inn eller registrer deg</h2>
+
+    <div class="flex gap-1 bg-primary-50 rounded-full p-1 mb-6 text-sm font-semibold">
+      <button type="button" data-tab="login" class="auth-tab flex-1 py-2 rounded-full transition-colors bg-white shadow-sm text-ink">Logg inn</button>
+      <button type="button" data-tab="register" class="auth-tab flex-1 py-2 rounded-full transition-colors text-mist">Registrer deg</button>
+    </div>
+
+    <div id="google-auth-section" class="hidden">
+      <button type="button" id="google-login-btn" class="w-full flex items-center justify-center gap-2.5 py-3 mb-4 border border-line rounded-xl text-sm font-semibold text-ink hover:bg-primary-50 transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.87-3.01c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28V6.61H1.28A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.39l3.99-3.11z"/><path fill="#EA4335" d="M12 4.76c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0A12 12 0 0 0 1.28 6.61l3.99 3.11C6.22 6.87 8.87 4.76 12 4.76z"/></svg>
+        Fortsett med Google
+      </button>
+      <div class="flex items-center gap-3 mb-4">
+        <span class="flex-1 h-px bg-line"></span>
+        <span class="text-xs text-mist">eller med e-post</span>
+        <span class="flex-1 h-px bg-line"></span>
+      </div>
+    </div>
+
+    <form id="login-form" class="space-y-3">
+      <label for="login-email" class="sr-only">E-post</label>
+      <input id="login-email" required type="email" name="email" placeholder="E-post" autocomplete="email"
+             class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      <label for="login-password" class="sr-only">Passord</label>
+      <input id="login-password" required type="password" name="password" placeholder="Passord" autocomplete="current-password"
+             class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      <button type="submit" id="login-submit-btn" class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-60">Logg inn</button>
+      <button type="button" id="forgot-password-btn" class="w-full text-center text-xs font-semibold text-mist hover:text-primary-600 transition-colors">Glemt passord?</button>
+    </form>
+
+    <form id="register-form" class="space-y-3 hidden">
+      <label for="register-name" class="sr-only">Fullt navn</label>
+      <input id="register-name" required type="text" name="fullName" maxlength="120" placeholder="Fullt navn" autocomplete="name"
+             class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      <label for="register-email" class="sr-only">E-post</label>
+      <input id="register-email" required type="email" name="email" placeholder="E-post" autocomplete="email"
+             class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      <label for="register-password" class="sr-only">Passord</label>
+      <input id="register-password" required type="password" name="password" placeholder="Passord (min. 10 tegn)" minlength="10" autocomplete="new-password"
+             class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      <label for="register-role" class="sr-only">Hva vil du bruke KollektivMatch til?</label>
+      <select id="register-role" name="role" class="w-full px-4 py-3 rounded-xl border border-line text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+        <option value="boligjeger">Jeg leter etter et sted å bo</option>
+        <option value="utleier">Jeg har et ledig rom</option>
+      </select>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label for="register-occupation" class="sr-only">Sysselsetting</label>
+        <select id="register-occupation" name="occupation" class="w-full px-4 py-3 rounded-xl border border-line text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+          <option value="">Sysselsetting (valgfritt)</option>
+          <option value="student">Student</option>
+          <option value="jobb">I jobb</option>
+          <option value="annet">Annet</option>
+        </select>
+        <label for="register-income" class="sr-only">Inntektsstatus</label>
+        <select id="register-income" name="incomeStatus" class="w-full px-4 py-3 rounded-xl border border-line text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+          <option value="">Inntektsstatus (valgfritt)</option>
+          <option value="fast">Fast inntekt</option>
+          <option value="deltid">Deltidsjobb</option>
+          <option value="stipend">Stipend / lån</option>
+          <option value="annet">Annet</option>
+        </select>
+      </div>
+      <label for="register-institution" class="sr-only">Studiested eller arbeidsgiver</label>
+      <input id="register-institution" type="text" name="institution" maxlength="160" placeholder="Studiested/arbeidsgiver (f.eks. UiO, BI, OsloMet)"
+             class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      <label for="register-budget" class="sr-only">Maks budsjett per måned</label>
+      <input id="register-budget" type="number" min="1" step="100" name="monthlyBudgetMax" placeholder="Maks budsjett per mnd (f.eks. 7500)"
+             class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+      <fieldset class="rounded-xl border border-line p-3">
+        <legend class="px-1 text-xs font-semibold text-mist">Verdsetter mest (velg opptil 3)</legend>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
+          <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="stort-rom" class="accent-primary-600" />Stort rom / plass</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="moderne-stil" class="accent-primary-600" />Minimalistisk og moderne stil</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="nyoppusset-bad" class="accent-primary-600" />Fint og nyoppusset bad</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="rolig-miljo" class="accent-primary-600" />Rolig og ordentlig miljø</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="stort-kjokken" class="accent-primary-600" />Stort kjøkken / sosiale soner</label>
+        </div>
+      </fieldset>
+      <label class="flex items-start gap-2 text-xs text-mist leading-relaxed">
+        <input required type="checkbox" name="acceptTerms" class="accent-primary-600 mt-0.5 shrink-0" />
+        <span>Jeg godtar <a href="terms.html" target="_blank" rel="noopener noreferrer" class="text-primary-700 font-semibold hover:underline">bruksvilkårene</a>. Les også hvordan opplysninger behandles i <a href="privacy.html" target="_blank" rel="noopener noreferrer" class="text-primary-700 font-semibold hover:underline">personvernerklæringen</a>.</span>
+      </label>
+      <button type="submit" id="register-submit-btn" class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-60">Opprett konto</button>
+    </form>
+
+    <div id="check-email-state" class="hidden text-center space-y-3 py-2">
+      <div class="w-12 h-12 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center mx-auto">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>
+      </div>
+      <h3 class="font-display font-bold text-lg text-ink">Sjekk e-posten din</h3>
+      <p class="text-sm text-mist">Vi har sendt en bekreftelseslenke til e-postadressen din. Klikk på den for å aktivere kontoen, og logg deretter inn.</p>
+      <button type="button" id="resend-confirmation-btn" class="text-sm font-semibold text-primary-700 hover:underline disabled:text-mist disabled:no-underline" disabled>Send bekreftelses-e-post på nytt (<span id="resend-countdown">60</span>)</button>
+      <button type="button" id="check-email-ok-btn" class="mt-2 px-5 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded-xl transition-colors">Greit!</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="app.js?v=20260826-1"></script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<title>Legg ut annonse – KollektivMatch</title>
+<meta name="description" content="Opprett eller rediger en boligannonse på KollektivMatch." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          cream: '#FAF9F6', ink: '#211C33', mist: '#6B667E', line: '#E7E3F5',
+          primary: {
+            50: '#F4F2FF', 100: '#ECE7FF', 200: '#DAD0FF', 300: '#BFABFF',
+            400: '#9F7CFF', 500: '#8449FF', 600: '#6C4CE0', 700: '#5A3EC2',
+            800: '#4A349E', 900: '#3D2E7D',
+          },
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          sans: ['"Inter"', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+<link rel="stylesheet" href="css/style.css?v=20260825-2" />
+</head>
+<body class="bg-cream text-ink font-sans antialiased min-h-screen flex flex-col">
+  <a class="skip-link" href="#main-content">Hopp til hovedinnhold</a>
+
+  <!-- HEADER -->
+  <header class="bg-cream/85 backdrop-blur-md border-b border-line sticky top-0 z-40">
+    <div class="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
+      <a href="index.html" class="font-display font-bold text-lg flex items-center gap-2.5">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect x="13" y="3" width="16" height="16" rx="5" fill="#BFABFF"/>
+          <rect x="3" y="7" width="16" height="16" rx="5" fill="#6C4CE0"/>
+        </svg>
+        KollektivMatch
+      </a>
+      <a href="index.html" class="text-sm font-semibold text-mist hover:text-ink transition-colors">← Tilbake</a>
+    </div>
+  </header>
+
+  <!-- FORM -->
+  <main id="main-content" tabindex="-1" class="max-w-2xl mx-auto px-5 py-10 w-full flex-1">
+    <div class="mb-7">
+      <h1 id="page-heading" class="font-display font-bold text-2xl md:text-3xl">Legg ut ledig rom</h1>
+      <p class="text-sm text-mist mt-1">Fyll ut det viktigste først. Du kan redigere eller slette annonsen senere fra «Min side».</p>
+    </div>
+
+    <div id="auth-check-state" class="bg-white rounded-2xl border border-line p-8 text-center text-sm text-mist" aria-live="polite">Kontrollerer innlogging …</div>
+    <form id="create-listing-form" class="hidden space-y-6">
+      <div class="listing-form-progress rounded-2xl border border-line bg-white/95 p-4 backdrop-blur" aria-label="Fremdrift i annonsen">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p id="listing-progress-label" class="text-sm font-bold text-ink">0 av 5 obligatoriske felt ferdig</p>
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <button id="save-listing-draft" type="button" class="font-semibold text-primary-700 hover:underline">Lagre kladd på denne enheten</button>
+            <button id="delete-listing-draft" type="button" class="hidden font-semibold text-mist hover:text-red-700">Fjern lagret kladd</button>
+          </div>
+        </div>
+        <div class="listing-progress-track mt-2" role="progressbar" aria-labelledby="listing-progress-label" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><div id="listing-progress-value" class="listing-progress-value"></div></div>
+        <p id="listing-draft-status" class="mt-2 text-[11px] text-mist" aria-live="polite">Kladd lagres bare hvis du velger det. Kontaktinfo, bilder og video lagres aldri i nettleserkladden.</p>
+      </div>
+
+      <!-- SEKSJON: OM BOLIGEN -->
+      <fieldset class="bg-white rounded-3xl border border-line p-6 space-y-4">
+        <legend class="font-display font-semibold text-base px-1 -ml-1">1. Om boligen</legend>
+
+        <div>
+          <label for="listing-title" class="block text-xs font-semibold text-mist mb-1">Overskrift / tittel *</label>
+          <input id="listing-title" required type="text" name="title" minlength="5" maxlength="100" placeholder="F.eks. Stort rom i koselig kollektiv på Grünerløkka"
+                 class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="listing-property-type" class="block text-xs font-semibold text-mist mb-1">Boligtype *</label>
+            <select id="listing-property-type" required name="property_type" class="w-full px-4 py-3 rounded-xl border border-line text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+              <option value="">Velg boligtype</option>
+              <option value="leilighet">Leilighet</option>
+              <option value="hybel">Hybel</option>
+              <option value="enebolig">Enebolig</option>
+              <option value="rekkehus">Rekkehus</option>
+              <option value="studentbolig">Studentbolig</option>
+              <option value="annet">Annet</option>
+            </select>
+          </div>
+          <div>
+            <label for="listing-price" class="block text-xs font-semibold text-mist mb-1">Pris per måned (kr) *</label>
+            <input id="listing-price" required type="number" name="price" placeholder="F.eks. 6500" min="1" max="1000000"
+                   class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="listing-move-in" class="block text-xs font-semibold text-mist mb-1">Innflyttingsdato</label>
+            <input id="listing-move-in" type="date" name="move_in_date"
+                   class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+          </div>
+          <div>
+            <label for="listing-room-size" class="block text-xs font-semibold text-mist mb-1">Romstørrelse (m²)</label>
+            <input id="listing-room-size" type="number" name="room_size_m2" min="1" max="1000" step="0.1" placeholder="F.eks. 12"
+                   class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="listing-deposit" class="block text-xs font-semibold text-mist mb-1">Depositum (kr)</label>
+            <input id="listing-deposit" type="number" name="deposit_amount" min="0" max="1000000" placeholder="F.eks. 19500"
+                   class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+          </div>
+          <div>
+            <label for="listing-furnished" class="block text-xs font-semibold text-mist mb-1">Møblering</label>
+            <select id="listing-furnished" name="furnished" class="w-full px-4 py-3 rounded-xl border border-line text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+              <option value="">Ikke oppgitt</option>
+              <option value="true">Møblert</option>
+              <option value="false">Ikke møblert</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="listing-description" class="block text-xs font-semibold text-mist mb-1">Beskrivelse *</label>
+          <textarea id="listing-description" required name="description" rows="5" minlength="30" maxlength="5000" placeholder="Fortell litt om rommet, kollektivet og hvem dere søker..."
+                    class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"></textarea>
+        </div>
+
+        <div>
+          <label for="listing-roommates" class="block text-xs font-semibold text-mist mb-1">Hvem bor der fra før?</label>
+          <input id="listing-roommates" type="text" name="roommates_info" maxlength="500" placeholder="F.eks. To jenter på 22 år som studerer..."
+                 class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+        </div>
+
+        <fieldset>
+          <legend class="block text-xs font-semibold text-mist mb-2">Inkludert i husleien</legend>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+            <label class="flex items-center gap-2"><input type="checkbox" name="rent_includes" value="strom" class="accent-primary-600" />Strøm</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="rent_includes" value="internett" class="accent-primary-600" />Internett</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="rent_includes" value="oppvarming" class="accent-primary-600" />Oppvarming</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="rent_includes" value="vann" class="accent-primary-600" />Vann</label>
+          </div>
+        </fieldset>
+      </fieldset>
+
+      <!-- SEKSJON: BELIGGENHET -->
+      <fieldset class="bg-white rounded-3xl border border-line p-6 space-y-4">
+        <legend class="font-display font-semibold text-base px-1 -ml-1">2. Beliggenhet</legend>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="listing-city" class="block text-xs font-semibold text-mist mb-1">By *</label>
+            <input id="listing-city" required type="text" name="city" maxlength="100" placeholder="F.eks. Oslo"
+                   class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+          </div>
+          <div>
+            <label for="listing-area" class="block text-xs font-semibold text-mist mb-1">Område / bydel</label>
+            <input id="listing-area" type="text" name="area" maxlength="120" placeholder="F.eks. Majorstuen"
+                   class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+          </div>
+        </div>
+
+        <p class="rounded-xl border border-primary-100 bg-primary-50/60 px-3 py-2.5 text-xs leading-relaxed text-mist">
+          For nærhetssøk lagrer vi bare et omtrentlig punkt for området eller byen du oppgir – aldri en gateadresse. Stedsnavn hentes fra Kartverket, og annonsen kan fortsatt publiseres hvis tjenesten er utilgjengelig.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
+          <label class="flex items-center gap-2"><input type="checkbox" name="amenities" value="matbutikk" class="accent-primary-600" />Matbutikk i nærheten</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="amenities" value="kollektivtransport" class="accent-primary-600" />Kort vei til kollektivtransport</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="amenities" value="treningssenter" class="accent-primary-600" />Nærhet til treningssenter</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="amenities" value="grontomrade" class="accent-primary-600" />Nærhet til grøntområder</label>
+        </div>
+
+        <div>
+          <label for="listing-transit" class="block text-xs font-semibold text-mist mb-1">Minutter til nærmeste T-bane/buss</label>
+          <input id="listing-transit" type="number" name="transit_minutes" min="0" max="600" placeholder="F.eks. 5"
+                 class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+        </div>
+      </fieldset>
+
+      <!-- SEKSJON: BILDER OG VIDEO -->
+      <fieldset class="bg-white rounded-3xl border border-line p-6 space-y-3">
+        <legend class="font-display font-semibold text-base px-1 -ml-1">3. Bilder og video</legend>
+        <p class="text-xs text-mist -mt-1">Legg til så mange JPG-, PNG- eller WebP-bilder du trenger. Det første blir forsidebildet. Bildene komprimeres før opplasting. Ikke last opp bilder av personer uten tillatelse, legitimasjon eller annen sensitiv informasjon.</p>
+
+        <label id="image-drop-zone" for="image-files-input" class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-2xl py-8 cursor-pointer hover:border-primary-300 hover:bg-primary-50/40 transition-colors" tabindex="0">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-primary-600"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M20 16.5v2A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-2"/></svg>
+          <span class="text-sm font-semibold text-ink">Klikk for å velge bilder</span>
+          <span class="text-xs text-mist">JPG, PNG eller WebP – dra og slipp fungerer også</span>
+        </label>
+        <input id="image-files-input" type="file" name="image_files" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple class="hidden" />
+
+        <p id="image-count" class="text-xs font-semibold text-mist" aria-live="polite">0 bilder valgt</p>
+        <div id="file-errors" class="hidden text-xs text-red-600 space-y-1" aria-live="assertive"></div>
+        <div id="image-preview-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+
+        <div class="pt-5 mt-5 border-t border-line space-y-3">
+          <div><h3 class="text-sm font-bold text-ink">Kort boligvideo <span class="font-normal text-mist">(valgfritt)</span></h3><p class="text-xs text-mist mt-1">Legg til én video på maks 90 sekunder og 50 MB. Bruk MP4, WebM eller MOV. Ikke film personer eller private opplysninger uten tillatelse.</p></div>
+          <label id="video-drop-zone" for="video-file-input" class="flex items-center justify-center gap-3 border-2 border-dashed border-line rounded-2xl px-4 py-5 cursor-pointer hover:border-primary-300 hover:bg-primary-50/40 transition-colors" tabindex="0">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-primary-600" aria-hidden="true"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 9 4-2v10l-4-2z"/></svg>
+            <span><span class="block text-sm font-semibold text-ink">Velg boligvideo</span><span class="block text-xs text-mist">eller dra videoen hit</span></span>
+          </label>
+          <input id="video-file-input" type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" class="hidden" />
+          <div id="video-errors" class="hidden text-xs text-red-600" aria-live="assertive"></div>
+          <div id="video-preview-card" class="hidden rounded-2xl border border-line bg-[#FAF9F6] p-3">
+            <video id="video-preview" controls playsinline preload="metadata" class="w-full max-h-80 rounded-xl bg-black"></video>
+            <div class="mt-2 flex items-center justify-between gap-3"><p id="video-meta" class="text-xs text-mist truncate"></p><button id="remove-video" type="button" class="shrink-0 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100">Fjern video</button></div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- SEKSJON: HVEM PASSER INN -->
+      <fieldset class="bg-white rounded-3xl border border-line p-6 space-y-4">
+        <legend class="font-display font-semibold text-base px-1 -ml-1">4. Hvem passer inn?</legend>
+
+        <p class="text-xs text-mist">Boligkvaliteter er valgfritt. Velg «Ingen av disse» hvis du ikke vil oppgi noe.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-ink">
+          <label class="flex items-center gap-2"><input type="checkbox" name="lifestyle_tags" value="stort-rom" class="accent-primary-600" />Stort rom / plass</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="lifestyle_tags" value="moderne-stil" class="accent-primary-600" />Minimalistisk og moderne stil</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="lifestyle_tags" value="nyoppusset-bad" class="accent-primary-600" />Fint og nyoppusset bad</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="lifestyle_tags" value="rolig-miljo" class="accent-primary-600" />Rolig og ordentlig miljø</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="lifestyle_tags" value="stort-kjokken" class="accent-primary-600" />Stort kjøkken / sosiale soner</label>
+          <label class="flex items-center gap-2 sm:col-span-2"><input id="lifestyle-none" type="checkbox" class="accent-primary-600" />Ingen av disse / ønsker ikke å oppgi</label>
+        </div>
+
+        <p class="text-xs text-mist pt-2 border-t border-line">«Passer best for» er valgfritt. Ingen valg betyr at alle er velkomne.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-ink pt-2 border-t border-line">
+          <label class="flex items-center gap-2"><input type="checkbox" name="preferred_occupations" value="student" class="accent-primary-600" />Student</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="preferred_occupations" value="jobb" class="accent-primary-600" />I jobb</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="preferred_occupations" value="annet" class="accent-primary-600" />Annet</label>
+        </div>
+      </fieldset>
+
+      <!-- SEKSJON: KONTAKT -->
+      <fieldset class="bg-white rounded-3xl border border-line p-6 space-y-3">
+        <legend class="font-display font-semibold text-base px-1 -ml-1">5. Kontaktinfo</legend>
+        <p class="text-xs text-mist -mt-1">Interesserte kan alltid sende deg melding direkte på KollektivMatch. Kontaktinformasjon du skriver inn her, vises til alle innloggede brukere. Ikke oppgi fødselsnummer, bankinformasjon eller adgangskoder.</p>
+        <div>
+          <label for="listing-contact" class="block text-xs font-semibold text-mist mb-1">Telefonnummer eller e-post (valgfritt)</label>
+          <input id="listing-contact" type="text" name="contact_info" maxlength="250" placeholder="F.eks. 412 34 567 eller navn@epost.no"
+                 class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
+        </div>
+      </fieldset>
+
+      <label class="block rounded-2xl border border-primary-200 bg-gradient-to-r from-primary-50 to-[#FFF7F0] p-4 cursor-pointer">
+        <span class="flex items-start gap-3"><input id="boost-after-publish" name="boost_after_publish" type="checkbox" class="mt-1 accent-primary-600" /><span><strong class="block text-sm text-ink">Vis fremhevingsvalg etter publisering</strong><span class="block text-xs text-mist mt-1">Vanlig publisering er gratis. Fremheving er et valgfritt og tydelig merket kjøp. Pris og varighet vises før du velger, og fremhevingen aktiveres bare etter bekreftet betaling.</span></span></span>
+      </label>
+
+      <button type="submit" id="submit-btn" class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-primary-600/20">
+        Publiser annonse
+      </button>
+      <p class="text-center text-xs text-mist">Ved publisering bekrefter du at innholdet følger <a href="terms.html" class="text-primary-700 font-semibold hover:underline">vilkårene</a>. Les også rådene om <a href="safety.html" class="text-primary-700 font-semibold hover:underline">trygg utleie</a>.</p>
+    </form>
+  </main>
+
+  <footer class="border-t border-line bg-white"><div class="max-w-2xl mx-auto px-5 py-6 text-xs text-mist flex flex-wrap gap-4 justify-between"><span>© 2026 KollektivMatch</span><nav class="legal-links"><a href="privacy.html">Personvern</a><a href="terms.html">Vilkår</a><a href="safety.html">Trygg bolighandel</a></nav></div></footer>
+
+  <div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col items-end" aria-live="polite"></div>
+  <script type="module" src="create-listing.js?v=20260825-5"></script>
+</body>
+</html>

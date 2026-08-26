@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<title>Bekrefter e-post – KollektivMatch</title>
+<meta name="description" content="Bekreft e-postadressen din og fortsett til KollektivMatch." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="css/style.css?v=20260823-4" />
+</head>
+<body class="bg-[#FAF9F6] text-[#211C33] font-sans antialiased min-h-screen flex items-center justify-center p-5">
+  <main class="w-full max-w-md bg-white rounded-3xl border border-[#E7E3F5] p-7 shadow-sm text-center">
+    <a href="index.html" class="font-display font-bold text-lg inline-flex items-center gap-2.5 mb-7">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="13" y="3" width="16" height="16" rx="5" fill="#BFABFF"/><rect x="3" y="7" width="16" height="16" rx="5" fill="#6C4CE0"/></svg>
+      KollektivMatch
+    </a>
+
+    <div id="callback-loading" aria-live="polite">
+      <p class="text-sm text-[#6B667E]">Bekrefter lenken din …</p>
+    </div>
+
+    <section id="callback-success" class="hidden space-y-4" aria-live="polite">
+      <h1 class="font-display font-bold text-2xl">E-posten er bekreftet</h1>
+      <p class="text-sm text-[#6B667E]">Du er logget inn og kan fortsette til siden du kom fra.</p>
+      <a id="continue-link" href="index.html" class="inline-block px-5 py-2.5 bg-[#6C4CE0] hover:bg-[#5A3EC2] text-white text-sm font-semibold rounded-xl">Fortsett</a>
+    </section>
+
+    <section id="callback-error" class="hidden space-y-4" aria-live="assertive">
+      <h1 class="font-display font-bold text-2xl">Lenken kunne ikke brukes</h1>
+      <p id="callback-error-message" class="text-sm text-[#6B667E]">Lenken kan være utløpt eller allerede brukt.</p>
+      <form id="resend-form" class="space-y-3 text-left">
+        <label for="resend-email" class="block text-xs font-semibold text-[#6B667E]">E-postadresse</label>
+        <input id="resend-email" name="email" type="email" required autocomplete="email" class="w-full px-4 py-3 rounded-xl border border-[#E7E3F5] text-sm" />
+        <button id="resend-btn" type="submit" class="w-full py-3 bg-[#F4F2FF] hover:bg-[#ECE7FF] text-[#6C4CE0] font-semibold rounded-xl disabled:opacity-60">Send bekreftelses-e-post på nytt</button>
+      </form>
+      <a href="index.html" class="inline-block text-sm font-semibold text-[#6C4CE0] hover:underline">Til forsiden</a>
+    </section>
+    <p class="mt-6 text-xs text-[#6B667E]"><a href="privacy.html" class="text-[#5A3EC2] hover:underline">Personvern</a></p>
+  </main>
+  <div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col items-end" aria-live="polite"></div>
+  <script type="module" src="auth-callback.js?v=20260823-2"></script>
+</body>
+</html>

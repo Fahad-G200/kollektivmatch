@@ -1,0 +1,26 @@
+[functions.vipps-payment-webhook]
+verify_jwt = false
+
+[functions.create-boost-payment]
+verify_jwt = true
+
+[functions.get-boost-payment-status]
+verify_jwt = true
+
+[functions.refund-boost-payment]
+verify_jwt = true
+
+[functions.start-vipps-verification]
+verify_jwt = true
+
+[functions.vipps-verification-callback]
+verify_jwt = false
+
+[functions.vipps-integration-status]
+verify_jwt = false
+
+[functions.create-stripe-boost-payment]
+verify_jwt = true
+
+[functions.stripe-payment-webhook]
+verify_jwt = false

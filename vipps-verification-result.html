@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Vipps-verifisering – KollektivMatch</title>
+<meta name="description" content="Kontroller status for koblingen mellom KollektivMatch-kontoen og Vipps." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="css/style.css?v=20260823-5" />
+</head>
+<body class="bg-[#FAF9F6] text-[#211C33] font-sans antialiased min-h-screen flex flex-col">
+  <a class="skip-link" href="#main-content">Hopp til hovedinnhold</a>
+  <header class="bg-white/85 backdrop-blur-md border-b border-[#E7E3F5]"><div class="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between"><a href="index.html" class="font-bold flex items-center gap-2"><span class="w-5 h-5 rounded-md bg-[#6C4CE0]" aria-hidden="true"></span>KollektivMatch</a><a href="dashboard.html#profile" class="text-sm font-semibold text-[#6B667E] hover:text-[#211C33]">Min side</a></div></header>
+  <main id="main-content" tabindex="-1" class="flex-1 w-full max-w-xl mx-auto px-5 py-14">
+    <section class="warm-card bg-white rounded-3xl border border-[#E7E3F5] p-7 md:p-10 text-center" aria-live="polite">
+      <div id="verification-result-icon" class="result-icon">···</div>
+      <p class="section-kicker mt-5">Kontobekreftelse</p>
+      <h1 id="verification-result-title" class="text-2xl md:text-3xl font-bold">Kontrollerer Vipps-koblingen …</h1>
+      <p id="verification-result-message" class="mt-3 text-[#6B667E]">Vi kontrollerer status direkte mot profilen din.</p>
+      <div id="verification-result-details" class="hidden mt-6 rounded-2xl border border-[#D8EBDD] bg-[#F2FBF5] p-4 text-sm text-left text-[#315B3B]">
+        <strong class="block">Vipps-konto bekreftet</strong>
+        <span>Merket vises på aktive annonser og i samtaler. Vi lagrer ikke telefonnummer, adresse eller fødselsnummer fra denne koblingen.</span>
+      </div>
+      <div class="mt-7 flex flex-col sm:flex-row justify-center gap-3">
+        <button id="verification-retry" type="button" class="hidden px-5 py-3 rounded-xl bg-[#F4F2FF] text-[#5A3EC2] font-semibold">Kontroller igjen</button>
+        <a href="dashboard.html#profile" class="px-5 py-3 rounded-xl bg-[#6C4CE0] hover:bg-[#5A3EC2] text-white font-semibold">Til profilen min</a>
+      </div>
+      <p class="mt-5 text-xs text-[#6B667E]">Vipps-koblingen bekrefter en Vipps-konto, men er ikke BankID eller elektronisk ID.</p>
+    </section>
+  </main>
+  <footer class="border-t border-[#E7E3F5] bg-white"><div class="max-w-3xl mx-auto px-5 py-6 text-xs text-[#6B667E] flex flex-wrap justify-between gap-4"><span>© 2026 KollektivMatch</span><nav class="legal-links"><a href="privacy.html">Personvern</a><a href="terms.html">Vilkår</a></nav></div></footer>
+  <script type="module" src="vipps-verification-result.js?v=20260823-1"></script>
+</body>
+</html>

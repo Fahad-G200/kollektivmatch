@@ -1,0 +1,17 @@
+.DS_Store
+.next/
+.vinext/
+.wrangler/
+dist/
+node_modules/
+public/
+npm-debug.log*
+next-env.d.ts
+schema_fresh_install_DELETES_ALL_DATA.sql
+.env
+.env.*
+!.env.example
+supabase/.temp/
+
+# Lokale leveranse- og sikkerhetskopiarkiver skal aldri publiseres.
+*.zip
