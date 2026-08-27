@@ -13,6 +13,7 @@ const webhook = read('supabase/functions/stripe-payment-webhook/index.ts');
 const status = read('supabase/functions/get-boost-payment-status/index.ts');
 const integrationStatus = read('supabase/functions/payment-integration-status/index.ts');
 const dashboard = read('dashboard.js');
+const deliveryGuard = read('migrations/2026-08-27_boost_delivery_guard.sql');
 
 assert.match(migration, /add column if not exists payment_provider text not null default 'vipps'/i);
 assert.match(migration, /payment_provider in \('vipps', 'stripe'\)/i);
@@ -49,6 +50,11 @@ assert.match(dashboard, /functions\.invoke\('payment-integration-status'/);
 assert.match(dashboard, /functions\.invoke\('create-stripe-boost-payment'/);
 assert.doesNotMatch(dashboard, /create-boost-payment|vipps/i);
 assert.doesNotMatch(dashboard, /from\('listings'\).*update[\s\S]*is_featured/s, 'Frontend skal ikke aktivere fremheving');
+assert.match(deliveryGuard, /before delete or update of status on public\.listings/i);
+assert.match(deliveryGuard, /provider_session_id is not null[\s\S]+status in \('pending', 'authorized'\)[\s\S]+interval '25 hours'/s);
+assert.match(deliveryGuard, /raise exception[\s\S]+Betaling for fremheving pågår/s);
+assert.match(dashboard, /hasOpenBoostPayment\(item\.id\)[\s\S]+Vent til betalingen er ferdig eller utløpt/s);
+assert.match(dashboard, /Gjenstående fremheving refunderes ikke automatisk/);
 
 function walk(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -66,4 +72,4 @@ const frontendFiles = walk(root).filter((path) => {
 const frontend = frontendFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
 assert.doesNotMatch(frontend, /sk_(?:test|live)_|whsec_|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET/);
 
-console.log('Stripe-fremheving: 32 sikkerhetskontroller besto.');
+console.log('Stripe-fremheving: 37 sikkerhetskontroller besto.');

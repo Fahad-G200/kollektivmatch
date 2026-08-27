@@ -32,6 +32,8 @@ const shortcutConversationsSummary = document.getElementById('shortcut-conversat
 const PLACEHOLDER_IMG = 'assets/placeholder.svg';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const STATUS_LABELS = { active: 'Aktiv', paused: 'Pauset', rented: 'Utleid' };
+const OPEN_PAYMENT_STATUSES = new Set(['pending', 'authorized']);
+const OPEN_PAYMENT_WINDOW_MS = 25 * 60 * 60 * 1000;
 const PAYMENT_LABELS = {
   pending: 'Venter på betaling', authorized: 'Autorisert – ikke betalt ennå', captured: 'Betalt og levert',
   cancelled: 'Kansellert', aborted: 'Avbrutt', expired: 'Utløpt', failed: 'Mislykket', refunded: 'Refundert',
@@ -39,6 +41,7 @@ const PAYMENT_LABELS = {
 let currentUser = null;
 let currentProfile = null;
 let myListings = [];
+let boostOrders = [];
 let avatarCropState = null;
 let boostProducts = [];
 let selectedBoostListing = null;
@@ -78,6 +81,17 @@ function formatNokFromOre(value) {
 
 function isEffectivelyFeatured(item) {
   return Boolean(item.is_featured && item.featured_until && new Date(item.featured_until) > new Date());
+}
+
+function hasOpenBoostPayment(listingId) {
+  const cutoff = Date.now() - OPEN_PAYMENT_WINDOW_MS;
+  return boostOrders.some((order) => order.listing_id === listingId
+    && OPEN_PAYMENT_STATUSES.has(order.status)
+    && new Date(order.created_at).getTime() > cutoff);
+}
+
+function isOpenPaymentGuardError(error) {
+  return error?.code === '55000' || /betaling.+fremheving.+p.g.r|betalingssesjon/i.test(error?.message || '');
 }
 
 function setPreferencesUnavailable() {
@@ -556,19 +570,27 @@ function listingCard(item) {
   const image = escapeHtml(item.images?.[0] || item.image_url || PLACEHOLDER_IMG);
   const hasStatus = Object.hasOwn(STATUS_LABELS, item.status);
   const featured = isEffectivelyFeatured(item);
+  const paymentOpen = hasOpenBoostPayment(item.id);
   const statusOptions = hasStatus ? Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`).join('') : '';
   const statusControl = hasStatus
-    ? `<label class="text-xs font-semibold text-mist">Status<select data-action="status" data-id="${item.id}" class="block mt-1 px-3 py-2 rounded-lg border border-line bg-white text-sm text-ink">${statusOptions}</select></label>`
+    ? `<label class="text-xs font-semibold text-mist">Status<select data-action="status" data-id="${item.id}" ${paymentOpen ? 'disabled title="Status er låst mens betalingen kontrolleres"' : ''} class="block mt-1 px-3 py-2 rounded-lg border border-line bg-white text-sm text-ink disabled:opacity-60 disabled:cursor-not-allowed">${statusOptions}</select></label>`
     : '<p class="text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">Statusstyring krever databaseoppdatering</p>';
   const featuredInfo = featured ? `<div class="featured-purchase-note"><strong>Fremhevet · kjøpt plassering</strong><span>til ${formatDate(item.featured_until)}</span></div>` : '';
-  const boostButton = hasStatus ? `<button type="button" data-action="boost" data-id="${item.id}" ${item.status !== 'active' ? 'disabled' : ''} class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed">Fremhev annonse</button>` : '';
+  const paymentNote = paymentOpen ? '<p class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">Betaling kontrolleres. Status og sletting er midlertidig låst slik at fremhevingen kan leveres.</p>' : '';
+  const boostButton = hasStatus ? `<button type="button" data-action="boost" data-id="${item.id}" ${item.status !== 'active' || paymentOpen ? 'disabled' : ''} class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed">${paymentOpen ? 'Betaling pågår' : 'Fremhev annonse'}</button>` : '';
   const seekersButton = item.status === 'active' ? `<a href="home-seekers.html?listing=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-[#FFF6EE] text-[#8A4E21] hover:bg-[#FCEBDD]">Finn boligsøkere</a>` : '';
   return `
     <article class="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-4" data-listing-id="${item.id}">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="flex items-center gap-4 min-w-0"><div class="w-16 h-16 bg-primary-50 rounded-lg overflow-hidden shrink-0"><img src="${image}" class="listing-thumb w-full h-full object-cover" alt="${escapeHtml(item.title)}"></div><div class="min-w-0"><div class="flex items-center gap-2"><h3 class="font-bold text-lg truncate">${escapeHtml(item.title)}</h3>${item.video_url ? '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary-50 text-primary-700">Video</span>' : ''}</div><p class="text-sm text-mist">${new Intl.NumberFormat('nb-NO').format(item.price)} kr/mnd • ${escapeHtml(item.city)}</p><p class="text-xs text-mist mt-1">Opprettet ${formatTime(item.created_at)} · Oppdatert ${formatTime(item.updated_at || item.created_at)}</p></div></div>${statusControl}</div>
-      ${featuredInfo}
-      <div class="flex items-center gap-2 flex-wrap justify-end">${seekersButton}${boostButton}<a href="listing-detail.html?id=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-mist hover:bg-primary-50 rounded-lg">Se</a><a href="create-listing.html?edit=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg">Rediger</a><button type="button" data-action="delete" data-id="${item.id}" class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-60">Slett</button></div>
+      ${featuredInfo}${paymentNote}
+      <div class="flex items-center gap-2 flex-wrap justify-end">${seekersButton}${boostButton}<a href="listing-detail.html?id=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-mist hover:bg-primary-50 rounded-lg">Se</a><a href="create-listing.html?edit=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg">Rediger</a><button type="button" data-action="delete" data-id="${item.id}" ${paymentOpen ? 'disabled title="Sletting er låst mens betalingen kontrolleres"' : ''} class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed">Slett</button></div>
     </article>`;
+}
+
+function renderListings() {
+  if (shortcutListingsSummary) shortcutListingsSummary.textContent = `${myListings.length} ${myListings.length === 1 ? 'annonse' : 'annonser'} å administrere`;
+  listingsContainer.innerHTML = myListings.length ? myListings.map(listingCard).join('') : '<div class="bg-white rounded-2xl p-12 text-center border border-line border-dashed"><p class="text-mist mb-4">Du har ingen annonser.</p><a href="create-listing.html" class="text-primary-600 font-semibold hover:underline">Opprett din første nå</a></div>';
+  listingsContainer.querySelectorAll('.listing-thumb').forEach((image) => installImageFallback(image, PLACEHOLDER_IMG));
 }
 
 async function loadListings() {
@@ -580,9 +602,7 @@ async function loadListings() {
     return;
   }
   myListings = data || [];
-  if (shortcutListingsSummary) shortcutListingsSummary.textContent = `${myListings.length} ${myListings.length === 1 ? 'annonse' : 'annonser'} å administrere`;
-  listingsContainer.innerHTML = myListings.length ? myListings.map(listingCard).join('') : '<div class="bg-white rounded-2xl p-12 text-center border border-line border-dashed"><p class="text-mist mb-4">Du har ingen annonser.</p><a href="create-listing.html" class="text-primary-600 font-semibold hover:underline">Opprett din første nå</a></div>';
-  listingsContainer.querySelectorAll('.listing-thumb').forEach((image) => installImageFallback(image, PLACEHOLDER_IMG));
+  renderListings();
 }
 
 function orderCard(order) {
@@ -606,7 +626,9 @@ async function loadBoostOrders() {
     }
     return;
   }
-  boostOrdersContainer.innerHTML = data?.length ? data.map(orderCard).join('') : '<div class="bg-white rounded-2xl p-8 text-center border border-line border-dashed text-mist">Ingen fremhevingskjøp ennå.</div>';
+  boostOrders = data || [];
+  boostOrdersContainer.innerHTML = boostOrders.length ? boostOrders.map(orderCard).join('') : '<div class="bg-white rounded-2xl p-8 text-center border border-line border-dashed text-mist">Ingen fremhevingskjøp ennå.</div>';
+  if (myListings.length) renderListings();
 }
 
 async function loadBoostProducts() {
@@ -713,12 +735,19 @@ boostForm.addEventListener('submit', async (event) => {
 listingsContainer.addEventListener('change', async (event) => {
   const select = event.target.closest('select[data-action="status"]');
   if (!select) return;
+  const item = myListings.find((listing) => listing.id === select.dataset.id);
+  if (!item) return;
+  if (hasOpenBoostPayment(item.id)) {
+    select.value = item.status;
+    showToast('Vent til betalingen er ferdig eller utløpt før du endrer status.', 'error');
+    return;
+  }
   select.disabled = true;
   const { error } = await supabase.from('listings').update({ status: select.value }).eq('id', select.dataset.id).eq('user_id', currentUser.id);
   select.disabled = false;
   if (error) {
     console.error('Kunne ikke oppdatere status:', error.message);
-    showToast('Kunne ikke endre annonsestatus.', 'error');
+    showToast(isOpenPaymentGuardError(error) ? 'Vent til betalingen er ferdig eller utløpt før du endrer status.' : 'Kunne ikke endre annonsestatus.', 'error');
     await loadListings();
   } else showToast(`Annonsen er markert som ${STATUS_LABELS[select.value].toLowerCase()}.`, 'success');
 });
@@ -729,13 +758,21 @@ listingsContainer.addEventListener('click', async (event) => {
   const item = myListings.find((listing) => listing.id === button.dataset.id);
   if (!item) return;
   if (button.dataset.action === 'boost') return openBoostModal(item);
-  if (button.dataset.action !== 'delete' || !confirm(`Slette «${item.title}» permanent?`)) return;
+  if (button.dataset.action !== 'delete') return;
+  if (hasOpenBoostPayment(item.id)) {
+    showToast('Vent til betalingen er ferdig eller utløpt før du sletter annonsen.', 'error');
+    return;
+  }
+  const deleteWarning = isEffectivelyFeatured(item)
+    ? `Slette «${item.title}» permanent? Gjenstående fremheving refunderes ikke automatisk.`
+    : `Slette «${item.title}» permanent?`;
+  if (!confirm(deleteWarning)) return;
   button.disabled = true;
   button.textContent = 'Sletter …';
   const { error } = await supabase.from('listings').delete().eq('id', item.id).eq('user_id', currentUser.id);
   if (error) {
     console.error('Kunne ikke slette annonse:', error.message);
-    showToast('Kunne ikke slette annonsen. Prøv igjen.', 'error');
+    showToast(isOpenPaymentGuardError(error) ? 'Vent til betalingen er ferdig eller utløpt før du sletter annonsen.' : 'Kunne ikke slette annonsen. Prøv igjen.', 'error');
     button.disabled = false;
     button.textContent = 'Slett';
     return;
