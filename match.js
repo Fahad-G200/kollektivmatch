@@ -6,6 +6,50 @@ function selectedValues(values) {
   return Array.isArray(values) ? [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))] : [];
 }
 
+function normalizeLocation(value) {
+  return String(value || '')
+    .trim()
+    .toLocaleLowerCase('nb-NO')
+    .replace(/[æ]/g, 'ae')
+    .replace(/[ø]/g, 'o')
+    .replace(/[å]/g, 'a')
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function locationParts(value) {
+  const rawParts = String(value || '').split(/[,/]/);
+  const normalized = rawParts.map(normalizeLocation).filter(Boolean);
+  const full = normalizeLocation(value);
+  return [...new Set([full, ...normalized].filter(Boolean))];
+}
+
+function locationMatchRatio(wantedLocation, listingLocations) {
+  const wantedParts = locationParts(wantedLocation);
+  const availableParts = listingLocations.flatMap(locationParts);
+  if (!wantedParts.length || !availableParts.length) return 0;
+
+  return wantedParts.some((wanted) => availableParts.some((available) => {
+    if (wanted === available) return true;
+    const shorterLength = Math.min(wanted.length, available.length);
+    if (shorterLength >= 3 && (wanted.includes(available) || available.includes(wanted))) return true;
+    const wantedTokens = new Set(wanted.split(' ').filter((token) => token.length >= 2));
+    return available.split(' ').some((token) => wantedTokens.has(token));
+  })) ? 1 : 0;
+}
+
+/**
+ * Feltet er «by / område». Når brukeren limer inn «område, by», søker vi på
+ * den mest presise første delen i databasen. Hele teksten brukes fortsatt i
+ * selve matchberegningen.
+ */
+export function primaryLocationSearchTerm(value) {
+  return String(value || '').split(/[,/]/).map((part) => part.trim()).find(Boolean) || '';
+}
+
 /**
  * Gjør det aktive søket til en del av Smart Match-grunnlaget. Et eksplisitt
  * filter overstyrer samme lagrede profilpreferanse, mens øvrige preferanser
@@ -64,13 +108,12 @@ export function computeMatch(listing, profile, context = {}) {
 
   const state = { points: 0, weight: 0, criteria: 0, explanations: [] };
 
-  const wantedLocation = String(preferences.search_location || '').trim().toLocaleLowerCase('nb-NO');
+  const wantedLocation = String(preferences.search_location || '').trim();
   const listingLocations = [listing.city, listing.area]
-    .map((value) => String(value || '').trim().toLocaleLowerCase('nb-NO'))
+    .map((value) => String(value || '').trim())
     .filter(Boolean);
   if (wantedLocation && listingLocations.length) {
-    const locationMatches = listingLocations.some((value) => value.includes(wantedLocation));
-    addCriterion(state, 25, locationMatches ? 1 : 0, 'Riktig område');
+    addCriterion(state, 25, locationMatchRatio(wantedLocation, listingLocations), 'Riktig område');
     state.criteria += 1;
   }
 
@@ -148,10 +191,14 @@ export function computeMatch(listing, profile, context = {}) {
   const minimumCriteria = schoolDistanceKm !== null ? 1 : 2;
   if (state.criteria < minimumCriteria || state.weight < (minimumCriteria === 1 ? 20 : 35)) return null;
 
+  const confidence = state.criteria >= 5 ? 'high' : state.criteria >= 3 ? 'medium' : 'limited';
+
   return {
     score: Math.round((state.points / state.weight) * 100),
     explanation: state.explanations.slice(0, 3).join(' · '),
     criteria: state.criteria,
+    confidence,
+    isSchoolOnly: state.criteria === 1 && schoolDistanceKm !== null,
     schoolDistanceKm,
   };
 }
@@ -162,6 +209,8 @@ export function compareBestMatch(a, b) {
   if (typeof aScore === 'number' || typeof bScore === 'number') {
     const scoreDiff = (bScore ?? -1) - (aScore ?? -1);
     if (scoreDiff) return scoreDiff;
+    const criteriaDiff = (b._match?.criteria ?? 0) - (a._match?.criteria ?? 0);
+    if (criteriaDiff) return criteriaDiff;
   }
   const ageDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   if (Math.abs(ageDiff) >= DAY_MS || ageDiff !== 0) return ageDiff;

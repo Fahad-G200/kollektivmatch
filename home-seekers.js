@@ -1,7 +1,7 @@
 import { supabase } from './supabase-config.js';
 import { rememberReturnTo } from './auth.js';
 import { showToast } from './ui.js';
-import { computeMatch, compareBestMatch } from './match.js?v=20260825-3';
+import { computeMatch, compareBestMatch } from './match.js?v=20260827-1';
 
 const select = document.getElementById('listing-select');
 const status = document.getElementById('seeker-status');
@@ -46,6 +46,8 @@ function safeAvatar(seeker) {
 
 function seekerCard(seeker) {
   const match = seeker._match;
+  const matchCriteria = Number(match?.criteria) || 0;
+  const matchBasis = matchCriteria ? `${matchCriteria} ${matchCriteria === 1 ? 'kriterium' : 'kriterier'}` : '';
   const badges = seeker.is_verified
     ? '<span class="trust-mini-badge">✓ Utdannings-e-post</span>'
     : '';
@@ -62,12 +64,13 @@ function seekerCard(seeker) {
     <article class="seeker-card bg-white rounded-3xl border border-line p-5 flex flex-col">
       <div class="flex items-start gap-3">
         <div class="seeker-avatar">${safeAvatar(seeker)}</div>
-        <div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold truncate">${escapeHtml(seeker.full_name || 'Boligsøker')}</h3><p class="text-xs text-mist mt-0.5">${escapeHtml(OCCUPATION_LABELS[seeker.occupation] || 'Boligsøker')}${seeker.institution ? ` · ${escapeHtml(seeker.institution)}` : ''}</p></div>${typeof match?.score === 'number' ? `<span class="seeker-match-badge" title="${escapeHtml(match.explanation || '')}">${match.score}%</span>` : ''}</div><div class="flex flex-wrap gap-1.5 mt-2">${badges}</div></div>
+        <div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold truncate">${escapeHtml(seeker.full_name || 'Boligsøker')}</h3><p class="text-xs text-mist mt-0.5">${escapeHtml(OCCUPATION_LABELS[seeker.occupation] || 'Boligsøker')}${seeker.institution ? ` · ${escapeHtml(seeker.institution)}` : ''}</p></div>${typeof match?.score === 'number' ? `<span class="seeker-match-badge" title="${escapeHtml([matchBasis ? `Basert på ${matchBasis}` : '', match.confidence === 'limited' ? 'Begrenset grunnlag' : '', match.explanation || ''].filter(Boolean).join(' · '))}">${match.score}%</span>` : ''}</div><div class="flex flex-wrap gap-1.5 mt-2">${badges}</div></div>
       </div>
       ${seeker.seeker_bio ? `<p class="text-sm text-mist leading-relaxed mt-4">${escapeHtml(seeker.seeker_bio)}</p>` : ''}
       ${preferences.length ? `<ul class="mt-4 space-y-1 text-xs text-mist">${preferences.map((item) => `<li>• ${item}</li>`).join('')}</ul>` : ''}
       ${tags.length ? `<div class="flex flex-wrap gap-1.5 mt-4">${tags.map((tag) => `<span class="seeker-preference-chip">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
       ${match?.explanation ? `<p class="mt-4 text-xs font-semibold text-primary-700">${escapeHtml(match.explanation)}</p>` : ''}
+      ${matchBasis ? `<p class="mt-1 text-[11px] text-mist">Matchgrunnlag: ${escapeHtml(matchBasis)}${match.confidence === 'limited' ? ' · begrenset' : ''}</p>` : ''}
       <button type="button" data-contact-seeker="${escapeHtml(seeker.id)}" class="mt-auto pt-5 w-full text-center"><span class="block px-4 py-2.5 rounded-xl bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-bold">Ta kontakt om annonsen</span></button>
     </article>`;
 }

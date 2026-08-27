@@ -1,6 +1,6 @@
 import { supabase } from './supabase-config.js';
 import { showToast } from './ui.js';
-import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool } from './match.js?v=20260825-3';
+import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm } from './match.js?v=20260827-1';
 import { formatDistance } from './location-utils.js?v=20260825-1';
 import { installImageFallback } from './storage-utils.js?v=20260823-4';
 
@@ -96,8 +96,16 @@ function renderEmptyState(filters) {
 function cardTemplate(listing) {
   const featuredBadge = isEffectivelyFeatured(listing) ? `
     <span class="absolute top-3 left-3 z-10 bg-primary-600 text-white text-[11px] font-semibold pl-2 pr-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">${STAR_ICON} Fremhevet · kjøpt</span>` : '';
+  const matchCriteria = Number(listing._match?.criteria) || 0;
+  const matchCriteriaLabel = matchCriteria === 1 ? '1 kriterium' : `${matchCriteria} kriterier`;
+  const matchLabel = listing._match?.isSchoolOnly ? 'nærhetsmatch' : 'match';
+  const matchTitle = [
+    matchCriteria ? `Basert på ${matchCriteriaLabel}` : '',
+    listing._match?.confidence === 'limited' ? 'Begrenset grunnlag' : '',
+    listing._match?.explanation || '',
+  ].filter(Boolean).join(' · ');
   const matchBadge = typeof listing._match?.score === 'number' ? `
-    <span class="absolute top-3 right-3 z-10 bg-white/95 text-primary-700 text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm" title="${escapeHtml(listing._match.explanation)}">${listing._match.score}% match</span>` : '';
+    <span class="absolute top-3 right-3 z-10 bg-white/95 text-primary-700 text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm" title="${escapeHtml(matchTitle)}">${listing._match.score}% ${matchLabel}</span>` : '';
   const preferencePrompt = listing._needsPreferences ? `
     <a href="dashboard.html#preferences" class="inline-block text-xs font-semibold text-primary-700 hover:underline mt-2">Fullfør preferansene dine</a>` : '';
   const visibleExplanation = String(listing._match?.explanation || '')
@@ -105,6 +113,7 @@ function cardTemplate(listing) {
     .filter((item) => !item.includes(' km fra '))
     .join(' · ');
   const explanation = visibleExplanation ? `<p class="text-xs text-mist mt-2 line-clamp-2">${escapeHtml(visibleExplanation)}</p>` : '';
+  const matchBasis = matchCriteria ? `<p class="mt-1 text-[11px] text-mist/80">Basert på ${escapeHtml(matchCriteriaLabel)}${listing._match?.confidence === 'limited' ? ' · begrenset grunnlag' : ''}</p>` : '';
   const schoolDistance = Number.isFinite(listing._match?.schoolDistanceKm) ? `
     <p class="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#EAF8F0] px-2 py-1 text-[11px] font-semibold text-[#207A45]" title="Omtrentlig luftlinje fra området i annonsen, ikke reisetid">
       ${PIN_ICON}<span>${escapeHtml(formatDistance(listing._match.schoolDistanceKm))} fra ${escapeHtml(listing._schoolName || 'valgt skole')}</span>
@@ -138,6 +147,7 @@ function cardTemplate(listing) {
           <p class="text-xs text-mist/80 mt-1">Innflytting: ${formatMoveIn(listing.move_in_date)}</p>
           ${schoolDistance}
           ${explanation}
+          ${matchBasis}
           <div class="listing-owner-row mt-4 pt-3 border-t border-line/80 flex items-center gap-2.5">
             <span class="listing-owner-avatar">${ownerPhoto}</span>
             <span class="min-w-0 text-xs font-semibold text-ink truncate">${ownerName}</span>
@@ -217,7 +227,7 @@ function sanitizeSearchTerm(value) {
 }
 
 function applyFilters(query, filters) {
-  const locationTerm = sanitizeSearchTerm(filters.city);
+  const locationTerm = sanitizeSearchTerm(primaryLocationSearchTerm(filters.city));
   if (locationTerm) query = query.or(`city.ilike.%${locationTerm}%,area.ilike.%${locationTerm}%`);
   if (filters.maxPrice) query = query.lte('price', Number(filters.maxPrice));
   if (filters.moveInDate) query = query.or(`move_in_date.is.null,move_in_date.lte.${filters.moveInDate}`);

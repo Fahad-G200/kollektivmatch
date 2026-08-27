@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool } from '../match.js';
+import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm } from '../match.js';
 
 const baseListing = {
   id: 'a',
@@ -45,6 +45,8 @@ const schoolOnly = computeMatch(baseListing, null, {
 });
 assert.equal(schoolOnly.score, 100, 'Valgt skole skal alene kunne gi en tydelig nærhetsmatch');
 assert.equal(schoolOnly.schoolDistanceKm, 0);
+assert.equal(schoolOnly.isSchoolOnly, true, 'Skole som eneste grunnlag skal merkes som nærhetsmatch');
+assert.equal(schoolOnly.confidence, 'limited', 'Ett kriterium skal ikke presenteres som et sterkt datagrunnlag');
 
 const fartherListing = {
   ...baseListing,
@@ -89,6 +91,24 @@ const filteredMatch = computeMatch({
   amenities: ['treningssenter'],
 }, filteredPreferences);
 assert.equal(filteredMatch.score, 100, 'En annonse som oppfyller alle valgte filtre skal få korrekt full match');
+assert.equal(filteredMatch.confidence, 'high', 'Fem eller flere vurderte kriterier skal gi høyt datagrunnlag');
+
+const compoundLocation = computeMatch({
+  ...baseListing,
+  city: 'Oslo',
+  area: 'Majorstuen',
+}, {
+  search_location: 'Majorstuen, Oslo',
+  monthly_budget_max: 8000,
+});
+assert.equal(compoundLocation.score, 100, 'Område og by skrevet sammen skal matches mot annonsens separate stedsfelt');
+
+const transliteratedLocation = computeMatch({ ...baseListing, city: 'Ås' }, {
+  search_location: 'As',
+  monthly_budget_max: 8000,
+});
+assert.equal(transliteratedLocation.score, 100, 'Norske bokstaver skal kunne matches med vanlig tastatur');
+assert.equal(primaryLocationSearchTerm('Majorstuen, Oslo'), 'Majorstuen', 'Sammensatt stedsfilter skal søke på det mest presise området');
 
 const filterMismatch = computeMatch({
   ...baseListing,
@@ -107,7 +127,11 @@ const missingTransit = computeMatch(
 );
 assert.equal(missingTransit, null, 'Manglende kollektivdata skal ikke feilaktig behandles som 0 minutter');
 
+const sameScoreThin = { ...baseListing, _match: { score: 100, criteria: 2 }, created_at: '2026-08-22T00:00:00Z' };
+const sameScoreSolid = { ...baseListing, id: 'solid', _match: { score: 100, criteria: 6 }, created_at: '2026-01-01T00:00:00Z' };
+assert.ok(compareBestMatch(sameScoreSolid, sameScoreThin) < 0, 'Lik prosent skal prioritere resultatet med sterkest datagrunnlag');
+
 const feedSource = readFileSync(new URL('../feed.js', import.meta.url), 'utf8');
 assert.match(feedSource, /rankAllMatchResults[\s\S]+MAX_CLIENT_RANKED_RESULTS[\s\S]+data\.sort\(compareBestMatch\)[\s\S]+data = data\.slice/, 'Beste match skal rangeres før paginering');
 
-console.log('Smart Match: 13 tester besto.');
+console.log('Smart Match: 19 tester besto.');
