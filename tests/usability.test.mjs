@@ -40,7 +40,6 @@ assert.match(dashboard, /<nav class="dashboard-shortcuts mb-10" aria-label="Snar
   ['#my-listings-section', 'Mine annonser'],
   ['#conversations', 'Meldinger'],
   ['#preferences', 'Søkepreferanser'],
-  ['#vipps-verification-card', 'Vipps-trygghet'],
   ['#privacy-account', 'Innstillinger'],
 ].forEach(([href, title]) => {
   assert.match(dashboard, new RegExp(`href="${href}"[\\s\\S]*?<span class="dashboard-shortcut-title">${title}<`));
@@ -50,6 +49,7 @@ assert.match(styles, /\.dashboard-shortcuts\s*\{[\s\S]{0,180}grid-template-colum
 assert.match(styles, /@media \(max-width: 440px\)[\s\S]{0,120}\.dashboard-shortcuts \{ grid-template-columns: 1fr; \}/);
 assert.match(dashboardJs, /shortcutListingsSummary\.textContent = `\$\{myListings\.length\}/);
 assert.match(dashboardJs, /shortcutConversationsSummary\.textContent = `\$\{conversations\.length\}[\s\S]{0,160}unreadCount/);
-assert.match(dashboardJs, /shortcutVippsSummary\.textContent = 'Vipps-kontoen din er bekreftet'/);
+assert.doesNotMatch(dashboard, /Vipps|vipps/i);
+assert.doesNotMatch(dashboardJs, /Vipps|vipps/i);
 
-console.log('Brukervennlighet: 30 statiske kontroller besto.');
+console.log('Brukervennlighet: 29 statiske kontroller besto.');

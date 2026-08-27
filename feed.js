@@ -120,8 +120,6 @@ function cardTemplate(listing) {
     ? `<img src="${escapeHtml(listing._ownerProfile.avatar_url)}" class="listing-owner-photo w-full h-full object-cover" alt="Profilbilde av ${ownerName}" /><span class="listing-owner-initials hidden" aria-hidden="true">${ownerInitials}</span>`
     : `<span class="listing-owner-initials" aria-hidden="true">${ownerInitials}</span>`;
   const verified = [
-    listing._ownerProfile?.vipps_verified
-      ? '<span class="text-[10px] font-semibold text-[#207A45] bg-[#EAF8F0] px-2 py-0.5 rounded-full">✓ Vipps</span>' : '',
     listing._ownerProfile?.is_verified
       ? '<span class="text-[10px] font-semibold text-[#5A3EC2] bg-[#F4F2FF] px-2 py-0.5 rounded-full">✓ Utdannings-e-post</span>' : '',
   ].join('');
@@ -202,7 +200,7 @@ function installOwnerAvatarFallbacks(root) {
 async function attachOwnerProfiles(listings) {
   const userIds = [...new Set(listings.map((listing) => listing.user_id).filter(Boolean))];
   if (!userIds.length) return;
-  let { data, error } = await supabase.from('profiles').select('id, full_name, avatar_url, vipps_verified, is_verified').in('id', userIds);
+  let { data, error } = await supabase.from('profiles').select('id, full_name, avatar_url, is_verified').in('id', userIds);
   if (error && isMissingColumnError(error)) {
     ({ data, error } = await supabase.from('profiles').select('id, full_name, avatar_url').in('id', userIds));
   }

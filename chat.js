@@ -26,12 +26,11 @@ function initials(name) {
 
 async function renderPeerIdentity() {
   const { data: profile, error } = await supabase.from('profiles')
-    .select('full_name, avatar_url, vipps_verified, is_verified').eq('id', peerUserId).single();
+    .select('full_name, avatar_url, is_verified').eq('id', peerUserId).single();
   if (error) console.error('Kunne ikke hente samtalepartnerens profil:', error.message);
   const name = profile?.full_name || 'KollektivMatch-bruker';
   document.getElementById('chat-peer-name').textContent = name;
   document.getElementById('chat-peer-initials').textContent = initials(name);
-  document.getElementById('chat-peer-vipps').classList.toggle('hidden', profile?.vipps_verified !== true);
   document.getElementById('chat-peer-education').classList.toggle('hidden', profile?.is_verified !== true);
   if (profile?.avatar_url) {
     const avatar = document.getElementById('chat-peer-avatar');

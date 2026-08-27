@@ -12,16 +12,16 @@ const chat = read('chat.js');
 const terms = read('terms.html');
 const securityMigration = read('migrations/2026-08-25_security_advisor_fixes.sql');
 
-assert.match(dashboardHtml, /Andre trygghetssignaler/);
+assert.match(dashboardHtml, /Trygghetssignaler/);
 assert.match(dashboard, /email_confirmed_at/);
 assert.match(dashboard, /currentProfile\?\.is_verified === true/);
-assert.match(feed, /vipps_verified, is_verified/);
 assert.match(feed, /Utdannings-e-post/);
-assert.match(chat, /vipps_verified, is_verified/);
+assert.match(chat, /avatar_url, is_verified/);
 assert.match(terms, /ikke BankID, elektronisk ID/);
 assert.doesNotMatch(dashboardHtml, /identiteten din er bekreftet/i);
+assert.doesNotMatch([dashboardHtml, dashboard, feed, chat, terms].join('\n'), /Vipps|vipps/i);
 assert.match(securityMigration, /to authenticated[\s\S]+storage\.foldername\(name\)/);
 assert.match(securityMigration, /where n\.nspname = 'public' and p\.prosecdef/);
 assert.match(securityMigration, /revoke execute on function public\.validate_listing_write\(\)/);
 
-console.log('Trygghetssignaler og Advisor-herding: 11 kontroller besto.');
+console.log('Trygghetssignaler og Advisor-herding: 10 kontroller besto.');

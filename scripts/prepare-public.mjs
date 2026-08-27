@@ -6,6 +6,10 @@ const rootUrl = new URL('../', import.meta.url);
 const publicUrl = new URL('../public/', import.meta.url);
 const root = fileURLToPath(rootUrl);
 const publicDir = fileURLToPath(publicUrl);
+const excludedLegacyFiles = new Set([
+  'vipps-verification-result.html',
+  'vipps-verification-result.js',
+]);
 
 await rm(publicDir, { recursive: true, force: true });
 await mkdir(publicDir, { recursive: true });
@@ -16,5 +20,6 @@ for (const name of ['assets', 'css']) {
 
 for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!entry.isFile() || !['.html', '.js'].includes(extname(entry.name))) continue;
+  if (excludedLegacyFiles.has(entry.name)) continue;
   await cp(join(root, entry.name), join(publicDir, entry.name));
 }

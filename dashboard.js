@@ -29,7 +29,6 @@ const avatarCropZoom = document.getElementById('avatar-crop-zoom');
 const avatarCropSave = document.getElementById('avatar-crop-save');
 const shortcutListingsSummary = document.getElementById('shortcut-listings-summary');
 const shortcutConversationsSummary = document.getElementById('shortcut-conversations-summary');
-const shortcutVippsSummary = document.getElementById('shortcut-vipps-summary');
 const PLACEHOLDER_IMG = 'assets/placeholder.svg';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const STATUS_LABELS = { active: 'Aktiv', paused: 'Pauset', rented: 'Utleid' };
@@ -47,7 +46,7 @@ let preferencesAvailable = true;
 let homeSeekerAvailable = true;
 let profileFieldsAvailable = true;
 let boostAvailable = true;
-let vippsCapabilities = null;
+let paymentCapabilities = null;
 
 function isMissingFunctionError(error) {
   return error?.code === 'PGRST202' || error?.code === '42883'
@@ -97,7 +96,6 @@ function setProfileUnavailable() {
   profileFieldsAvailable = false;
   document.getElementById('profile-unavailable')?.classList.remove('hidden');
   profileForm.querySelectorAll('input, select, button').forEach((control) => { control.disabled = true; });
-  if (shortcutVippsSummary) shortcutVippsSummary.textContent = 'Krever databaseoppdatering';
 }
 
 async function removeAllUserImages(userId) {
@@ -162,51 +160,6 @@ function renderProfileAvatar(url, name) {
   }
 }
 
-function renderVippsVerification() {
-  const card = document.getElementById('vipps-verification-card');
-  const status = document.getElementById('vipps-verification-status');
-  const description = document.getElementById('vipps-verification-description');
-  const note = document.getElementById('vipps-verification-note');
-  const button = document.getElementById('start-vipps-verification');
-  if (!card || !status || !description || !note || !button) return;
-
-  const verified = currentProfile?.vipps_verified === true;
-  card.classList.toggle('is-verified', verified);
-  note.classList.add('hidden');
-  if (verified) {
-    status.textContent = 'Vipps-konto bekreftet';
-    status.classList.add('is-verified');
-    description.textContent = 'Kontoen din er koblet til en serververifisert Vipps-konto. Merket vises på annonsene dine og i samtaler.';
-    if (shortcutVippsSummary) shortcutVippsSummary.textContent = 'Vipps-kontoen din er bekreftet';
-    button.classList.add('hidden');
-    return;
-  }
-
-  status.textContent = 'Ikke bekreftet';
-  status.classList.remove('is-verified');
-  button.classList.remove('hidden');
-  if (currentProfile && !Object.hasOwn(currentProfile, 'vipps_verified')) {
-    button.disabled = true;
-    if (shortcutVippsSummary) shortcutVippsSummary.textContent = 'Krever databaseoppdatering';
-    note.textContent = 'Databasemigreringen for Vipps-verifisering må installeres først.';
-    note.classList.remove('hidden');
-  } else if (!vippsCapabilities) {
-    button.disabled = true;
-    button.textContent = 'Kontrollerer Vipps …';
-    if (shortcutVippsSummary) shortcutVippsSummary.textContent = 'Kontrollerer bekreftelsesstatus …';
-  } else if (!vippsCapabilities.login_ready) {
-    button.disabled = true;
-    button.textContent = 'Bekreft med Vipps';
-    if (shortcutVippsSummary) shortcutVippsSummary.textContent = 'Klar når virksomhetens Vipps-avtale er aktiv';
-    note.textContent = 'Den tekniske koblingen er klar, men virksomhetens Vipps Login-avtale og nøkler må aktiveres før bruk.';
-    note.classList.remove('hidden');
-  } else {
-    button.disabled = false;
-    button.textContent = 'Bekreft med Vipps';
-    if (shortcutVippsSummary) shortcutVippsSummary.textContent = 'Kontoen kan bekreftes med Vipps';
-  }
-}
-
 function renderAccountTrustSignals() {
   const emailStatus = document.getElementById('email-confirmation-status');
   const educationStatus = document.getElementById('education-email-status');
@@ -221,12 +174,11 @@ function renderAccountTrustSignals() {
   educationStatus.classList.toggle('is-verified', educationConfirmed);
 }
 
-async function loadVippsCapabilities() {
-  const { data, error } = await supabase.functions.invoke('vipps-integration-status', { body: {} });
-  vippsCapabilities = error || !data
-    ? { login_ready: false, payment_ready: false, stripe_payment_ready: false, preferred_payment_provider: null, environment: null }
+async function loadPaymentCapabilities() {
+  const { data, error } = await supabase.functions.invoke('payment-integration-status', { body: {} });
+  paymentCapabilities = error || !data
+    ? { stripe_payment_ready: false, environment: null }
     : data;
-  renderVippsVerification();
 }
 
 function checkValues(name, values) {
@@ -237,7 +189,6 @@ async function loadProfileAndPreferences() {
   const { data, error } = await supabase.rpc('get_my_profile');
   if (error) {
     console.error('Kunne ikke hente profil:', error.message);
-    if (shortcutVippsSummary) shortcutVippsSummary.textContent = 'Status kunne ikke lastes';
     if (isMissingFunctionError(error)) {
       setProfileUnavailable();
       setPreferencesUnavailable();
@@ -252,7 +203,6 @@ async function loadProfileAndPreferences() {
   profileForm.income_amount.value = profile?.income_amount ?? '';
   profileForm.income_period.value = profile?.income_period || 'month';
   renderProfileAvatar(profile?.avatar_url, profile?.full_name);
-  renderVippsVerification();
   renderAccountTrustSignals();
   if (!Object.hasOwn(profile || {}, 'income_amount')) setProfileUnavailable();
 
@@ -266,28 +216,6 @@ async function loadProfileAndPreferences() {
     preferencesForm.seeker_bio.value = profile?.seeker_bio ?? '';
   } else setHomeSeekerUnavailable();
 }
-
-document.getElementById('start-vipps-verification')?.addEventListener('click', async (event) => {
-  const button = event.currentTarget;
-  if (button.disabled || currentProfile?.vipps_verified) return;
-  button.disabled = true;
-  button.textContent = 'Åpner Vipps …';
-  const { data, error } = await supabase.functions.invoke('start-vipps-verification', { body: {} });
-  if (data?.already_verified) {
-    currentProfile = { ...currentProfile, vipps_verified: true };
-    renderVippsVerification();
-    showToast('Vipps-kontoen er allerede bekreftet.', 'success');
-    return;
-  }
-  if (error || !data?.verification_url) {
-    console.error('Kunne ikke starte Vipps-verifisering:', error?.message || data?.error || 'UNKNOWN');
-    showToast(data?.message || 'Kunne ikke starte Vipps-verifiseringen. Prøv igjen senere.', 'error');
-    button.disabled = false;
-    button.textContent = 'Bekreft med Vipps';
-    return;
-  }
-  window.location.assign(data.verification_url);
-});
 
 profileForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -607,7 +535,7 @@ async function loadConversations() {
   const profileIds = [...new Set(conversations.map((item) => item.otherId))];
   const [{ data: listingRows }, { data: profileRows }] = await Promise.all([
     supabase.from('listings').select('id, title').in('id', listingIds),
-    supabase.from('profiles').select('id, full_name, avatar_url, vipps_verified, is_verified').in('id', profileIds),
+    supabase.from('profiles').select('id, full_name, avatar_url, is_verified').in('id', profileIds),
   ]);
   const listingMap = Object.fromEntries((listingRows || []).map((row) => [row.id, row]));
   const profileMap = Object.fromEntries((profileRows || []).map((row) => [row.id, row]));
@@ -619,7 +547,7 @@ async function loadConversations() {
       : `<span>${escapeHtml(profileInitials(name))}</span>`;
     return `
       <a href="chat.html?listing=${encodeURIComponent(listingId)}&user=${encodeURIComponent(otherId)}" class="bg-white rounded-2xl border border-line p-5 hover:border-primary-200 block transition-colors">
-        <div class="flex items-start gap-3"><div class="chat-peer-avatar">${avatar}</div><div class="min-w-0 flex-1"><div class="flex items-center gap-2 flex-wrap"><p class="text-xs font-bold">${escapeHtml(name)}</p>${profile.vipps_verified ? '<span class="inline-flex bg-[#EAF8F0] text-[#207A45] text-[10px] font-semibold px-2 py-0.5 rounded-full">✓ Vipps-bekreftet</span>' : ''}${profile.is_verified ? '<span class="inline-flex bg-[#F4F2FF] text-[#5A3EC2] text-[10px] font-semibold px-2 py-0.5 rounded-full">✓ Utdannings-e-post</span>' : ''}</div><h3 class="font-semibold truncate">${escapeHtml(listingMap[listingId]?.title || 'Annonse')}</h3><p class="text-sm text-mist mt-1 truncate">${escapeHtml(message.content)}</p></div><div class="text-right shrink-0"><p class="text-xs text-mist">${formatTime(message.created_at)}</p>${unread ? `<span class="inline-block mt-2 px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 text-xs font-semibold">${unread} ulest</span>` : ''}</div></div>
+        <div class="flex items-start gap-3"><div class="chat-peer-avatar">${avatar}</div><div class="min-w-0 flex-1"><div class="flex items-center gap-2 flex-wrap"><p class="text-xs font-bold">${escapeHtml(name)}</p>${profile.is_verified ? '<span class="inline-flex bg-[#F4F2FF] text-[#5A3EC2] text-[10px] font-semibold px-2 py-0.5 rounded-full">✓ Utdannings-e-post</span>' : ''}</div><h3 class="font-semibold truncate">${escapeHtml(listingMap[listingId]?.title || 'Annonse')}</h3><p class="text-sm text-mist mt-1 truncate">${escapeHtml(message.content)}</p></div><div class="text-right shrink-0"><p class="text-xs text-mist">${formatTime(message.created_at)}</p>${unread ? `<span class="inline-block mt-2 px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 text-xs font-semibold">${unread} ulest</span>` : ''}</div></div>
       </a>`;
   }).join('');
 }
@@ -661,7 +589,7 @@ function orderCard(order) {
   const status = escapeHtml(PAYMENT_LABELS[order.status] || 'Kontrolleres');
   const success = order.status === 'captured';
   return `<article class="payment-summary-card">
-    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3"><div><p class="text-xs text-mist">Ordre ${escapeHtml(order.reference)} · ${order.payment_provider === 'stripe' ? 'Kort / digital lommebok' : 'Vipps'}</p><h3 class="font-semibold mt-0.5">${escapeHtml(order.listing_title)}</h3><p class="text-sm text-mist">${escapeHtml(order.product_name)} · ${order.duration_days} dager</p></div><span class="payment-status ${success ? 'is-success' : ''}">${status}</span></div>
+    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3"><div><p class="text-xs text-mist">Ordre ${escapeHtml(order.reference)} · ${order.payment_provider === 'stripe' ? 'Kort / digital lommebok' : 'Tidligere betalingsleverandør'}</p><h3 class="font-semibold mt-0.5">${escapeHtml(order.listing_title)}</h3><p class="text-sm text-mist">${escapeHtml(order.product_name)} · ${order.duration_days} dager</p></div><span class="payment-status ${success ? 'is-success' : ''}">${status}</span></div>
     <dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-sm"><div><dt class="text-xs text-mist">Totalpris</dt><dd class="font-semibold">${formatNokFromOre(order.amount_ore)}</dd></div><div><dt class="text-xs text-mist">Opprettet</dt><dd>${formatDate(order.created_at)}</dd></div><div><dt class="text-xs text-mist">Betalingsdato</dt><dd>${order.captured_at ? formatDate(order.captured_at) : 'Ikke captured'}</dd></div><div><dt class="text-xs text-mist">Fremhevet til</dt><dd>${order.boost_end_at ? formatDate(order.boost_end_at) : 'Ikke aktivert'}</dd></div></dl>
   </article>`;
 }
@@ -702,22 +630,15 @@ function renderBoostProducts() {
     return;
   }
   container.innerHTML = boostProducts.map((product, index) => `<label class="boost-product-option"><input type="radio" name="product_id" value="${escapeHtml(product.id)}" ${index === 0 ? 'checked' : ''} class="sr-only peer"><span class="block text-sm font-bold">${escapeHtml(product.name)}</span><span class="block text-2xl font-bold text-primary-700 mt-2">${formatNokFromOre(product.price_ore)}</span><span class="block text-xs text-mist mt-1">Én betaling · ${product.duration_days} dager</span></label>`).join('');
-  const methods = [];
-  if (vippsCapabilities?.stripe_payment_ready === true) {
-    methods.push({ id: 'stripe', title: 'Kort eller digital lommebok', detail: 'Sikker betaling levert av Stripe' });
-  }
-  if (vippsCapabilities?.payment_ready === true) {
-    methods.push({ id: 'vipps', title: 'Vipps', detail: 'Betal i Vipps MobilePay' });
-  }
-  const preferred = methods.some((method) => method.id === vippsCapabilities?.preferred_payment_provider)
-    ? vippsCapabilities.preferred_payment_provider
-    : methods[0]?.id;
+  const methods = paymentCapabilities?.stripe_payment_ready === true
+    ? [{ id: 'stripe', title: 'Kort eller digital lommebok', detail: 'Sikker betaling levert av Stripe' }]
+    : [];
   methodsContainer.innerHTML = methods.length
-    ? methods.map((method) => `<label class="boost-product-option"><input type="radio" name="payment_provider" value="${method.id}" ${method.id === preferred ? 'checked' : ''} class="sr-only peer"><span class="block text-sm font-bold">${method.title}</span><span class="block text-xs text-mist mt-1">${method.detail}</span></label>`).join('')
+    ? methods.map((method) => `<label class="boost-product-option"><input type="radio" name="payment_provider" value="${method.id}" checked class="sr-only peer"><span class="block text-sm font-bold">${method.title}</span><span class="block text-xs text-mist mt-1">${method.detail}</span></label>`).join('')
     : '<p class="sm:col-span-2 text-sm text-mist">Ingen betalingskonto er koblet til ennå.</p>';
   availabilityNote.textContent = methods.length
     ? ''
-    : 'Opprett en Stripe-konto eller aktiver Vipps ePayment før ekte betaling kan starte.';
+    : 'Stripe-kontoen må være ferdig konfigurert før betaling kan starte.';
   availabilityNote.classList.toggle('hidden', methods.length > 0);
   payButton.disabled = methods.length === 0;
   updateBoostPaymentMethod();
@@ -725,13 +646,10 @@ function renderBoostProducts() {
 }
 
 function updateBoostPaymentMethod() {
-  const provider = new FormData(boostForm).get('payment_provider');
   const payButton = document.getElementById('boost-pay');
   const note = document.getElementById('boost-provider-note');
-  payButton.textContent = provider === 'vipps' ? 'Betal med Vipps' : 'Gå til sikker betaling';
-  note.textContent = provider === 'vipps'
-    ? 'Du sendes til Vipps MobilePay. Annonsen fremheves først etter serverbekreftet betaling.'
-    : 'Du sendes til Stripe for kort, Apple Pay eller Google Pay når tilgjengelig. Annonsen fremheves først etter serverbekreftet betaling.';
+  payButton.textContent = 'Gå til sikker betaling';
+  note.textContent = 'Du sendes til Stripe for kort, Apple Pay eller Google Pay når tilgjengelig. Annonsen fremheves først etter serverbekreftet betaling.';
 }
 
 function updateBoostTotal() {
@@ -763,10 +681,8 @@ boostForm.addEventListener('submit', async (event) => {
   const button = document.getElementById('boost-pay');
   const errorBox = document.getElementById('boost-error');
   const data = new FormData(boostForm);
-  const provider = data.get('payment_provider');
-  const providerReady = provider === 'stripe'
-    ? vippsCapabilities?.stripe_payment_ready === true
-    : provider === 'vipps' && vippsCapabilities?.payment_ready === true;
+  const providerReady = data.get('payment_provider') === 'stripe'
+    && paymentCapabilities?.stripe_payment_ready === true;
   if (!providerReady) {
     errorBox.textContent = 'Den valgte betalingsmåten er ikke aktivert ennå.';
     errorBox.classList.remove('hidden');
@@ -780,8 +696,7 @@ boostForm.addEventListener('submit', async (event) => {
   button.disabled = true;
   button.textContent = 'Oppretter sikker betaling …';
   errorBox.classList.add('hidden');
-  const functionName = provider === 'stripe' ? 'create-stripe-boost-payment' : 'create-boost-payment';
-  const { data: response, error } = await supabase.functions.invoke(functionName, {
+  const { data: response, error } = await supabase.functions.invoke('create-stripe-boost-payment', {
     body: { listing_id: selectedBoostListing.id, product_id: data.get('product_id'), accepted_terms: true },
   });
   if (error || !response?.redirect_url) {
@@ -910,7 +825,7 @@ async function init() {
   renderAccountTrustSignals();
   authNav.innerHTML = `<div class="flex items-center gap-3"><span class="text-xs text-mist hidden sm:inline">${escapeHtml(user.email || '')}</span><button type="button" id="logout-btn" class="px-4 py-2 text-sm font-semibold text-mist hover:text-red-500">Logg ut</button></div>`;
   document.getElementById('logout-btn').addEventListener('click', async () => { await supabase.auth.signOut(); window.location.replace('index.html'); });
-  await Promise.all([loadVippsCapabilities(), loadProfileAndPreferences(), loadListings(), loadConversations(), loadBoostProducts(), loadBoostOrders()]);
+  await Promise.all([loadPaymentCapabilities(), loadProfileAndPreferences(), loadListings(), loadConversations(), loadBoostProducts(), loadBoostOrders()]);
   const params = new URLSearchParams(window.location.search);
   const publishedId = params.get('published');
   if (params.get('boost') === '1' && UUID_PATTERN.test(publishedId || '')) {

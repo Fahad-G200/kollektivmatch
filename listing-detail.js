@@ -87,7 +87,7 @@ function renderVideo() {
 
 async function renderTrustBadges() {
   const [{ data: ownerProfile }, { data: stats }] = await Promise.all([
-    supabase.from('profiles').select('full_name, avatar_url, is_verified, vipps_verified').eq('id', listing.user_id).single(),
+    supabase.from('profiles').select('full_name, avatar_url, is_verified').eq('id', listing.user_id).single(),
     supabase.rpc('get_response_stats', { target_user: listing.user_id }),
   ]);
   const ownerName = ownerProfile?.full_name || 'KollektivMatch-bruker';
@@ -105,12 +105,6 @@ async function renderTrustBadges() {
     }, { once: true });
   }
   const container = document.getElementById('owner-trust-badges');
-  if (ownerProfile?.vipps_verified) {
-    const badge = document.createElement('span');
-    badge.className = 'inline-flex items-center bg-[#EAF8F0] text-[#207A45] text-[11px] font-semibold px-2.5 py-1 rounded-full';
-    badge.textContent = '✓ Vipps-konto bekreftet';
-    container.appendChild(badge);
-  }
   if (ownerProfile?.is_verified) {
     const badge = document.createElement('span');
     badge.className = 'inline-flex items-center bg-[#F4F2FF] text-[#6C4CE0] text-[11px] font-semibold px-2.5 py-1 rounded-full';

@@ -63,11 +63,6 @@
         <span class="dashboard-shortcut-title">Finn boligsøkere</span>
         <span class="dashboard-shortcut-description">Se hvem som matcher en aktiv annonse</span>
       </a>
-      <a href="#vipps-verification-card" class="dashboard-shortcut-card">
-        <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4.5 6v5.5c0 4.7 3.1 8 7.5 9.5 4.4-1.5 7.5-4.8 7.5-9.5V6Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span>
-        <span class="dashboard-shortcut-title">Vipps-trygghet</span>
-        <span id="shortcut-vipps-summary" class="dashboard-shortcut-description">Kontrollerer bekreftelsesstatus …</span>
-      </a>
       <a href="#privacy-account" class="dashboard-shortcut-card">
         <span class="dashboard-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg></span>
         <span class="dashboard-shortcut-title">Innstillinger</span>
@@ -79,7 +74,7 @@
       <div class="flex items-start justify-between gap-4">
         <div><p class="section-kicker">Bli litt bedre kjent</p><h2 class="font-display font-bold text-2xl">Profilen din</h2><p class="text-sm text-mist mt-1">Profilbildet og navnet ditt kan vises på aktive annonser. Inntekt er privat, valgfritt og brukes ikke i søk eller Smart Match.</p></div>
       </div>
-      <p id="profile-unavailable" class="hidden mt-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">De nye profilfeltene blir tilgjengelige når Vipps- og profilmigreringen er installert.</p>
+      <p id="profile-unavailable" class="hidden mt-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">De nye profilfeltene blir tilgjengelige når profilmigreringen er installert.</p>
       <form id="profile-form" class="mt-6 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-7">
         <div class="text-center">
           <div class="profile-avatar-shell mx-auto">
@@ -109,25 +104,11 @@
         </div>
       </form>
 
-      <div id="vipps-verification-card" class="vipps-verification-card mt-7 scroll-mt-24" aria-live="polite">
-        <div class="vipps-verification-icon" aria-hidden="true">✓</div>
-        <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <h3 class="font-bold">Bekreft kontoen med Vipps</h3>
-            <span id="vipps-verification-status" class="trust-status-badge">Ikke bekreftet</span>
-          </div>
-          <p id="vipps-verification-description" class="text-sm text-mist mt-1">Koble den innloggede kontoen til din Vipps-konto for å gi andre mer trygghet på annonser og i samtaler.</p>
-          <p class="text-[11px] text-mist mt-2">Vi lagrer bare en teknisk Vipps-ID og tidspunktet for koblingen. Dette er ikke BankID eller elektronisk ID.</p>
-          <p id="vipps-verification-note" class="hidden text-xs text-amber-800 mt-2"></p>
-        </div>
-        <button id="start-vipps-verification" type="button" class="vipps-button shrink-0 rounded-xl px-5 py-3 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed">Bekreft med Vipps</button>
-      </div>
-
       <div id="account-trust-card" class="account-trust-card mt-4" aria-live="polite">
         <div class="account-trust-icon" aria-hidden="true">@</div>
         <div class="min-w-0 flex-1">
-          <h3 class="font-bold">Andre trygghetssignaler</h3>
-          <p class="text-sm text-mist mt-1">Disse brukes som et tydelig alternativ mens Vipps ikke er aktivert.</p>
+          <h3 class="font-bold">Trygghetssignaler</h3>
+          <p class="text-sm text-mist mt-1">Bekreftet e-post gjør det enklere for andre å forstå hvilke opplysninger som er kontrollert.</p>
           <div class="account-trust-statuses mt-3">
             <div><span id="email-confirmation-status" class="trust-status-badge">Kontrollerer e-post …</span><span class="text-xs text-mist">Bekreftet innloggingsadresse</span></div>
             <div><span id="education-email-status" class="trust-status-badge">Ikke bekreftet</span><span class="text-xs text-mist">Utdannings-e-post</span></div>
@@ -269,7 +250,7 @@
         <p id="boost-error" class="hidden rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert"></p>
         <fieldset><legend class="text-sm font-bold mb-3">Betalingsmåte</legend><div id="boost-payment-methods" class="grid sm:grid-cols-2 gap-3"><p class="text-sm text-mist">Kontrollerer tilgjengelige betalingsmåter …</p></div></fieldset>
         <p id="boost-availability-note" class="hidden rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">Betaling må først kobles til en godkjent betalingskonto.</p>
-        <button id="boost-pay" type="submit" class="vipps-button w-full rounded-xl px-5 py-3.5 font-bold disabled:opacity-60">Gå til sikker betaling</button>
+        <button id="boost-pay" type="submit" class="payment-button w-full rounded-xl px-5 py-3.5 font-bold disabled:opacity-60">Gå til sikker betaling</button>
         <p id="boost-provider-note" class="text-center text-[11px] text-mist">Du sendes til betalingsleverandørens sikre betalingsside. Annonsen fremheves først etter serverbekreftet betaling.</p>
       </div>
     </form>

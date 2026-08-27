@@ -46,10 +46,9 @@ function safeAvatar(seeker) {
 
 function seekerCard(seeker) {
   const match = seeker._match;
-  const badges = [
-    seeker.is_verified ? '<span class="trust-mini-badge">✓ Utdannings-e-post</span>' : '',
-    seeker.vipps_verified ? '<span class="trust-mini-badge trust-mini-badge--green">✓ Vipps</span>' : '',
-  ].join('');
+  const badges = seeker.is_verified
+    ? '<span class="trust-mini-badge">✓ Utdannings-e-post</span>'
+    : '';
   const preferences = [
     seeker.monthly_budget_max ? `Maks ${new Intl.NumberFormat('nb-NO').format(seeker.monthly_budget_max)} kr/mnd` : '',
     seeker.desired_move_in_date ? `Innflytting ${formatDate(seeker.desired_move_in_date)}` : '',

@@ -39,7 +39,7 @@ assert.match(vipps, /VIPPS_PRODUCTION_CONFIRMED/);
 assert.match(vipps, /apiBase !== 'https:\/\/api\.vipps\.no'/);
 assert.match(resultPage, /order\.status === 'captured'/);
 assert.doesNotMatch(resultPage, /from\('listings'\).*update|is_featured|featured_until/s, 'Return-siden skal aldri aktivere fremheving');
-assert.match(dashboard, /button\.disabled = true[\s\S]+create-boost-payment/);
+assert.match(dashboard, /button\.disabled = true[\s\S]+create-stripe-boost-payment/);
 assert.match(feed, /case 'price_low': return query\.order\('price', \{ ascending: true \}\)/, 'Prissortering må forbli eksplisitt');
 
 function walk(directory) {

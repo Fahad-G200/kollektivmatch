@@ -11,6 +11,7 @@ const reconcile = read('supabase/functions/_shared/stripe-reconcile.ts');
 const createPayment = read('supabase/functions/create-stripe-boost-payment/index.ts');
 const webhook = read('supabase/functions/stripe-payment-webhook/index.ts');
 const status = read('supabase/functions/get-boost-payment-status/index.ts');
+const integrationStatus = read('supabase/functions/payment-integration-status/index.ts');
 const dashboard = read('dashboard.js');
 
 assert.match(migration, /add column if not exists payment_provider text not null default 'vipps'/i);
@@ -41,6 +42,12 @@ assert.match(reconcile, /session\.amount_total !== order\.amount_ore/);
 assert.match(reconcile, /session\.metadata\?\.reference !== order\.reference/);
 assert.match(reconcile, /session\.payment_status === 'paid'[\s\S]+apply_captured_boost/s);
 assert.match(status, /payment_provider === 'stripe'[\s\S]+reconcileStripeOrder/s);
+assert.match(integrationStatus, /getStripeConfig\(\)/);
+assert.match(integrationStatus, /requireStripeWebhookSecret\(\)/);
+assert.doesNotMatch(integrationStatus, /Vipps|vipps/);
+assert.match(dashboard, /functions\.invoke\('payment-integration-status'/);
+assert.match(dashboard, /functions\.invoke\('create-stripe-boost-payment'/);
+assert.doesNotMatch(dashboard, /create-boost-payment|vipps/i);
 assert.doesNotMatch(dashboard, /from\('listings'\).*update[\s\S]*is_featured/s, 'Frontend skal ikke aktivere fremheving');
 
 function walk(directory) {
@@ -59,4 +66,4 @@ const frontendFiles = walk(root).filter((path) => {
 const frontend = frontendFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
 assert.doesNotMatch(frontend, /sk_(?:test|live)_|whsec_|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET/);
 
-console.log('Stripe-fremheving: 26 sikkerhetskontroller besto.');
+console.log('Stripe-fremheving: 32 sikkerhetskontroller besto.');

@@ -11,6 +11,7 @@ const start = read('supabase/functions/start-vipps-verification/index.ts');
 const callback = read('supabase/functions/vipps-verification-callback/index.ts');
 const result = read('vipps-verification-result.js');
 const dashboard = read('dashboard.js');
+const preparePublic = read('scripts/prepare-public.mjs');
 
 assert.match(migration, /vipps_sub text not null unique/i, 'Én Vipps-identitet kan bare kobles én gang');
 assert.match(migration, /user_id uuid primary key references auth\.users\(id\) on delete cascade/i);
@@ -57,7 +58,8 @@ assert.doesNotMatch(callback, /console\.(?:log|error)\([^\n]*(?:access_token|id_
 assert.match(result, /rpc\('get_my_profile'\)/, 'Resultatsiden skal kontrollere serverlagret profilstatus');
 assert.match(result, /profile\?\.vipps_verified === true/);
 assert.doesNotMatch(result, /resultHint === 'completed'[\s\S]{0,120}success/i, 'URL-hint alene skal ikke gi suksess');
-assert.match(dashboard, /start-vipps-verification/);
+assert.doesNotMatch(dashboard, /start-vipps-verification|vipps-integration-status/i);
+assert.match(preparePublic, /excludedLegacyFiles[\s\S]+vipps-verification-result\.html[\s\S]+vipps-verification-result\.js/);
 
 function walk(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -72,4 +74,4 @@ const frontend = walk(root)
   .map((path) => readFileSync(path, 'utf8')).join('\n');
 assert.doesNotMatch(frontend, /VIPPS_LOGIN_CLIENT_SECRET|vipps_sub|code_verifier/);
 
-console.log('Vipps Login-sikkerhet: 42 statiske kontroller besto.');
+console.log('Avviklet Vipps-flyt og sikker legacy-kode: 43 statiske kontroller besto.');
