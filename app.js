@@ -9,9 +9,9 @@ import {
   rememberReturnTo,
 } from './auth.js';
 import { ENABLE_GOOGLE_AUTH } from './supabase-config.js';
-import { loadListings, loadMoreListings, populateCitySuggestions } from './feed.js?v=20260826-1';
+import { loadListings, loadMoreListings, populateCitySuggestions } from './feed.js?v=20260827-1';
 import { openModal, closeModal, showToast } from './ui.js';
-import { searchSchools } from './location-utils.js?v=20260825-1';
+import { searchSchools } from './location-utils.js?v=20260827-2';
 
 const authButtons = document.getElementById('auth-buttons');
 const userMenu = document.getElementById('user-menu');
@@ -226,7 +226,7 @@ function clearSchool({ keepText = false } = {}) {
   hideSchoolSuggestions();
   const sortSelect = filterForm?.elements?.sortBy;
   if (sortSelect?.value === 'nearest_school') sortSelect.value = 'best_match';
-  if (schoolStatus) schoolStatus.textContent = 'Skolefeltet kan stå tomt. Avstand er luftlinje fra annonsens oppgitte område, ikke reisetid.';
+  if (schoolStatus) schoolStatus.textContent = 'Søk med skolenavn eller forkortelser som UiO, UiB, UiT, NTNU og NMBU. Feltet er valgfritt.';
   updateAdvancedFilterSummary();
 }
 
@@ -293,7 +293,7 @@ schoolInput?.addEventListener('input', () => {
   clearTimeout(schoolSearchTimer);
   if (query.length < 2) {
     hideSchoolSuggestions();
-    if (schoolStatus) schoolStatus.textContent = query ? 'Skriv minst to tegn for å få forslag.' : 'Skolefeltet kan stå tomt. Avstand er luftlinje fra annonsens oppgitte område, ikke reisetid.';
+    if (schoolStatus) schoolStatus.textContent = query ? 'Skriv minst to tegn for å få forslag.' : 'Søk med skolenavn eller forkortelser som UiO, UiB, UiT, NTNU og NMBU. Feltet er valgfritt.';
     return;
   }
   schoolSearchTimer = setTimeout(() => findSchoolSuggestions(query), 280);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { haversineKm, formatDistance } from '../location-utils.js';
+import { haversineKm, formatDistance, schoolSearchQueries, searchSchools } from '../location-utils.js';
 
 const migration = fs.readFileSync(new URL('../migrations/2026-08-25_school_proximity.sql', import.meta.url), 'utf8');
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -20,6 +20,37 @@ assert.equal(haversineKm(
 ), null, 'Manglende annonsekoordinater skal ikke bli tolket som 0,0');
 assert.match(formatDistance(0.42), /400 m|450 m/);
 assert.match(formatDistance(3.25), /3,3 km/);
+assert.deepEqual(schoolSearchQueries('UiO').slice(0, 2), ['Universitetet i Oslo', 'UiO']);
+assert.ok(schoolSearchQueries('Oslo').includes('Universitetet i Oslo'), 'Søk på Oslo skal også lete etter UiO');
+assert.ok(schoolSearchQueries('Oslo').some((query) => query.startsWith('OsloMet')), 'Søk på Oslo skal fortsatt finne OsloMet');
+
+const originalFetch = globalThis.fetch;
+const requestedSearches = [];
+globalThis.fetch = async (url) => {
+  const search = new URL(url).searchParams.get('sok');
+  requestedSearches.push(search);
+  const isUiO = search?.startsWith('Universitetet i Oslo');
+  return {
+    ok: true,
+    async json() {
+      return { navn: isUiO ? [{
+        stedsnummer: 84823,
+        skrivemåte: 'Universitetet i Oslo',
+        navneobjekttype: 'Universitet/høgskole',
+        representasjonspunkt: { nord: 59.9375, øst: 10.71905 },
+        kommuner: [{ kommunenavn: 'Oslo' }],
+        fylker: [{ fylkesnavn: 'Oslo' }],
+      }] : [] };
+    },
+  };
+};
+try {
+  const aliasResults = await searchSchools('UiO', { limit: 8, timeoutMs: 100 });
+  assert.equal(aliasResults[0]?.name, 'Universitetet i Oslo', 'UiO-forkortelsen skal gi riktig universitet');
+  assert.ok(requestedSearches.some((search) => search?.startsWith('Universitetet i Oslo')), 'Alias-søket skal sendes til Kartverket');
+} finally {
+  globalThis.fetch = originalFetch;
+}
 assert.match(locationUtils, /api\.kartverket\.no\/stedsnavn\/v1\/navn/);
 assert.match(locationUtils, /SCHOOL_TYPES = new Set\(\['Skole', 'Universitet\/høgskole'\]\)/);
 assert.match(index, /id="f-school"[\s\S]+id="school-suggestions"/);
@@ -35,4 +66,4 @@ assert.match(migration, /add column if not exists location_lat double precision/
 assert.match(migration, /location_precision in \('area', 'city'\)/i);
 assert.match(migration, /grant select \(location_lat, location_lon, location_precision\)[\s\S]+to anon, authenticated/i);
 
-console.log('Skolenærhet: 18 tester besto.');
+console.log('Skolenærhet: 23 tester besto.');

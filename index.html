@@ -199,7 +199,7 @@
           <p class="mt-0.5 text-xs text-mist">Velg et forslag for å se omtrentlig avstand og la Smart Match prioritere boliger i nærheten.</p>
           <div class="relative mt-3 max-w-xl">
             <div class="flex rounded-xl border border-line bg-white focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20">
-              <input id="f-school" name="schoolName" type="text" maxlength="100" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="school-suggestions" aria-expanded="false" placeholder="F.eks. Universitetet i Oslo"
+              <input id="f-school" name="schoolName" type="text" maxlength="100" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="school-suggestions" aria-expanded="false" placeholder="Søk med navn eller forkortelse, f.eks. UiO"
                      class="min-w-0 flex-1 rounded-l-xl px-3.5 py-2.5 text-sm text-ink placeholder:text-mist/70 focus:outline-none" />
               <button id="clear-school" type="button" class="hidden shrink-0 px-3 text-xs font-semibold text-mist hover:text-ink" aria-label="Fjern valgt skole">Fjern</button>
             </div>
@@ -207,7 +207,7 @@
           </div>
           <input id="f-school-lat" name="schoolLat" type="hidden" />
           <input id="f-school-lon" name="schoolLon" type="hidden" />
-          <p id="school-search-status" class="mt-2 text-xs text-mist" aria-live="polite">Skolefeltet kan stå tomt. Avstand er luftlinje fra annonsens oppgitte område, ikke reisetid.</p>
+          <p id="school-search-status" class="mt-2 text-xs text-mist" aria-live="polite">Søk med skolenavn eller forkortelser som UiO, UiB, UiT, NTNU og NMBU. Feltet er valgfritt.</p>
           <p class="mt-1 text-[11px] text-mist/80">Stedsdata fra <a href="https://www.kartverket.no/api-og-data/stedsnavndata" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary-700 hover:underline">Kartverket</a>.</p>
         </div>
       </div>
@@ -437,6 +437,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=20260826-1"></script>
+<script type="module" src="app.js?v=20260827-2"></script>
 </body>
 </html>

@@ -1,6 +1,24 @@
 const KARTVERKET_API = 'https://api.kartverket.no/stedsnavn/v1/navn';
 const SCHOOL_TYPES = new Set(['Skole', 'Universitet/høgskole']);
 const DEFAULT_TIMEOUT_MS = 4500;
+const HIGHER_EDUCATION_SEARCHES = [
+  { query: 'Universitetet i Oslo', aliases: ['uio', 'universitetet oslo', 'oslo universitet'] },
+  { query: 'Universitetet i Bergen', aliases: ['uib', 'bergen universitet'] },
+  { query: 'UiT Norges arktiske universitet', aliases: ['uit', 'tromso universitet', 'tromsø universitet'] },
+  { query: 'NTNU', aliases: ['ntnu', 'trondheim universitet'] },
+  { query: 'Norges miljø- og biovitenskapelige universitet', aliases: ['nmbu', 'as universitet', 'ås universitet'] },
+  { query: 'Universitetet i Agder', aliases: ['uia', 'agder universitet'] },
+  { query: 'Universitetet i Sørøst-Norge', aliases: ['usn', 'sorost norge universitet', 'sørøst norge universitet'] },
+  { query: 'Universitetet i Innlandet', aliases: ['inn', 'innlandet universitet'] },
+  { query: 'Nord universitet', aliases: ['nord universitet'] },
+  { query: 'OsloMet - storbyuniversitetet', aliases: ['oslomet', 'oslo met', 'storbyuniversitetet'] },
+  { query: 'Norges Handelshøyskole', aliases: ['nhh', 'handelshoyskolen bergen', 'handelshøyskolen bergen'] },
+  { query: 'Høgskulen på Vestlandet', aliases: ['hvl', 'vestlandet hogskule', 'vestlandet høgskule'] },
+  { query: 'Høgskolen i Molde', aliases: ['himolde', 'him', 'molde hogskole', 'molde høgskole'] },
+  { query: 'Kunsthøgskolen i Oslo', aliases: ['khio', 'kunsthogskolen oslo', 'kunsthøgskolen oslo'] },
+  { query: 'VID vitenskapelige høgskole', aliases: ['vid', 'vid hogskole', 'vid høgskole'] },
+  { query: 'Høyskolen Kristiania', aliases: ['kristiania', 'hoyskolen kristiania', 'høyskolen kristiania'] },
+];
 
 function normalizeText(value) {
   return String(value || '')
@@ -70,16 +88,69 @@ async function fetchPlaces(query, { signal, limit = 30, timeoutMs = DEFAULT_TIME
   }
 }
 
+export function schoolSearchQueries(query, maxQueries = 4) {
+  const cleaned = String(query || '').replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
+  const normalized = normalizeText(cleaned);
+  if (normalized.length < 2) return [];
+
+  const expanded = HIGHER_EDUCATION_SEARCHES
+    .map((entry) => ({
+      ...entry,
+      terms: [entry.query, ...entry.aliases].map(normalizeText),
+    }))
+    .filter((entry) => entry.terms.some((term) => term === normalized
+      || term.startsWith(normalized)
+      || (normalized.length >= 3 && term.includes(normalized))))
+    .sort((first, second) => {
+      const firstExact = first.terms.includes(normalized) ? 1 : 0;
+      const secondExact = second.terms.includes(normalized) ? 1 : 0;
+      return secondExact - firstExact;
+    })
+    .map((entry) => entry.query);
+
+  return [...new Set([...expanded, cleaned])].slice(0, Math.max(1, maxQueries));
+}
+
+function schoolRelevance(place, originalQuery, searches) {
+  const name = normalizeText(place.name);
+  const original = normalizeText(originalQuery);
+  let score = 0;
+  if (name === original) score += 500;
+  else if (name.startsWith(original)) score += 320;
+  else if (original.length >= 3 && name.includes(original)) score += 220;
+
+  searches.forEach((search, index) => {
+    const expanded = normalizeText(search);
+    const priority = Math.max(0, 40 - (index * 5));
+    if (name === expanded) score += 400 + priority;
+    else if (name.startsWith(expanded)) score += 260 + priority;
+    else if (expanded.length >= 3 && name.includes(expanded)) score += 160 + priority;
+  });
+  return score;
+}
+
 export async function searchSchools(query, options = {}) {
-  const places = await fetchPlaces(query, { ...options, limit: 50 });
+  const searches = schoolSearchQueries(query);
+  if (!searches.length) return [];
+  const resultSets = await Promise.all(searches.map(async (search) => {
+    try {
+      return await fetchPlaces(search, { ...options, limit: 50 });
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+      return [];
+    }
+  }));
   const seen = new Set();
-  return places.filter((place) => {
-    if (!SCHOOL_TYPES.has(place.type)) return false;
-    const key = `${place.name}|${place.municipality}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).slice(0, options.limit || 8);
+  return resultSets.flat()
+    .filter((place) => SCHOOL_TYPES.has(place.type))
+    .sort((first, second) => schoolRelevance(second, query, searches) - schoolRelevance(first, query, searches))
+    .filter((place) => {
+      const key = `${normalizeText(place.name)}|${normalizeText(place.municipality)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, options.limit || 8);
 }
 
 function placeRelevance(place, area, city) {
