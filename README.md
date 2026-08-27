@@ -1,8 +1,11 @@
 # KollektivMatch
 
-KollektivMatch er en vanilla HTML/CSS/JavaScript-plattform for å finne og
-annonsere kollektivrom. Supabase brukes til Auth, PostgreSQL, RLS, Storage og
-Realtime.
+KollektivMatch er en HTML/CSS/JavaScript-plattform for å finne og annonsere
+kollektivrom. Supabase brukes til Auth, PostgreSQL, RLS, Storage og Realtime.
+Next/Vinext-laget finnes bare for bygging og publisering hos OpenAI Sites;
+produktlogikken er fortsatt vanlig nettleser-JavaScript og er ikke avhengig av
+Next-spesifikke API-er. Tailwind bygges lokalt til `css/tailwind.css` og lastes
+ikke fra en CDN i nettleseren.
 
 ## Viktig før oppstart
 
@@ -44,15 +47,16 @@ kontosletting, dataeksport, rapportering og den sikrede meldingsflyten.
 
 ## Kjør lokalt
 
-ES-moduler krever en lokal webserver. Fra prosjektmappen kan du for eksempel
-kjøre:
+Installer låste avhengigheter og start den lokale utviklingsserveren fra
+prosjektmappen:
 
 ```bash
-python3 -m http.server 5500
+npm ci
+npm run dev
 ```
 
-Åpne deretter `http://localhost:5500/`. Hvis prosjektet serveres fra en
-undermappe, må den undermappen være med i alle URL-ene nedenfor.
+Utviklingskommandoen bygger først Tailwind lokalt og oppretter den offentlige
+leveransen uten eldre Vipps-verifiseringssider.
 
 Supabase-klienten er låst til `@supabase/supabase-js@2.111.0` i
 `supabase-config.js`; den flytende `@2`-importen brukes ikke.
@@ -318,7 +322,8 @@ brukeren godtar gjeldende vilkår; e-postskjemaets avkryssing dekker ikke OAuth.
   annonsestatus støttes gjennom hele flyten.
 - Smart Match normaliserer bare over vurderbare preferanser. Aktive søkefiltre
   overstyrer samme lagrede profilvalg, manglende data gir ingen poeng, og hele
-  resultatsettet rangeres før paginering når «Beste match» brukes.
+  resultatsettet rangeres før paginering når «Beste match» brukes. Hver vist
+  prosent kan åpnes for å se oppfylte, delvise og svake kriterier.
 - Skole/studiested er et frivillig søkefelt basert på Kartverkets åpne
   stedsnavn-API. Valgt skole kan sortere annonser etter nærhet og inngå i den
   veiledende matchprosenten. Annonsen lagrer bare et omtrentlig område-/bypunkt,
@@ -336,13 +341,15 @@ brukeren godtar gjeldende vilkår; e-postskjemaets avkryssing dekker ikke OAuth.
 - Profilen støtter valgfritt profilbilde og omtrentlig time-, måneds- eller
   årsinntekt. Inntekten er privat og brukes ikke som filter eller Smart Match-
   kriterium.
-- Brukere kan koble kontoen til Vipps med en servervalidert OIDC-flyt. Bare et
-  offentlig ja/nei-merke vises; rå Vipps-identifikator er utilgjengelig for
-  nettleserroller.
+- Vipps-verifisering ligger kun igjen som historisk kildekode og migreringer;
+  den kopieres ikke til den offentlige leveransen og vises ikke i produktet.
 - Utleiere kan kjøpe 7 dager (4900 øre) eller 30 dager (9900 øre) fremheving via
-  serververifisert Vipps ePayment eller Stripe Checkout. Kjøpt plassering er tydelig adskilt fra Smart
+  serververifisert Stripe Checkout. Kjøpt plassering er tydelig adskilt fra Smart
   Match og eksplisitt prissortering forblir ren. Publiseringsskjemaet kan åpne
   fremhevingsvalgene etter publisering, men starter aldri betaling automatisk.
+- «Nyinnflyttet?» viser live spotpris for NO1–NO5 fra den åpne tjenesten
+  Hva koster strømmen, med tydelig forbehold om nettleie, avgifter, påslag og
+  eventuell strømstøtte.
 - Resultatlisten viser antall treff, har ryddig tomtilstand og bruker et lokalt
   plassholderbilde uten forespørsel til en tredjepart.
 - Personvern-, vilkårs- og sikkerhetssider er lagt inn, men juridiske
@@ -370,8 +377,9 @@ en serverfunksjon, aldri i frontend, og merk annonsenes kilde tydelig.
   avgjørelser. Overvåk også personverninnboksen.
 - Dokumenter risikovurdering, tilgangsrevisjon, backup-gjenoppretting og rutine
   for sikkerhetsbrudd. Varslingsfristen til Datatilsynet kan være 72 timer.
-- Server nettstedet over HTTPS med HSTS og relevante sikkerhetsheadere. Bundl
-  Tailwind og Supabase-klienten lokalt før en streng CSP aktiveres.
+- Server nettstedet over HTTPS med HSTS og relevante sikkerhetsheadere.
+  Tailwind er lokalt bygget; Supabase-klienten bør også bundtes lokalt før en
+  streng CSP aktiveres.
 - Ikke legg til analyse eller markedsføringssporing uten egen vurdering og gyldig
   forhåndssamtykke. Nødvendig sesjonslagring alene trenger ikke et kunstig banner.
 - Test RLS, Storage, meldingsbegrensning, eksport og sletting i et separat
@@ -379,7 +387,8 @@ en serverfunksjon, aldri i frontend, og merk annonsenes kilde tydelig.
   `contact_info`, private profilfelt, meldinger eller rapporter.
 
 Den fullstendige gjennomgangen og produktforslagene ligger i
-`docs/AUDIT-2026-08-23.md`.
+`docs/AUDIT-2026-08-23.md`. En samtykkebasert plan for de første annonsene
+ligger i `docs/FIRST-LISTINGS-PLAN.md`.
 
 ## Filstruktur
 
@@ -395,11 +404,11 @@ kollektivmatch/
 ├── vipps-verification-result.html / vipps-verification-result.js
 ├── chat.html / chat.js
 ├── reset-password.html / reset-password.js
-├── moving-in.html
+├── moving-in.html / moving-in.js / power-prices.js
 ├── privacy.html / terms.html / safety.html
 ├── supabase-config.js / ui.js
 ├── avatar-crop.js
-├── css/style.css
+├── css/style.css / css/tailwind-input.css / css/tailwind.css
 ├── migrations/2026-08-23_kollektivmatch_hardening.sql
 ├── migrations/2026-08-23_real_vipps_boost.sql
 ├── migrations/2026-08-23_vipps_account_verification.sql
@@ -415,38 +424,23 @@ kollektivmatch/
 ├── docs/AUDIT-2026-08-23.md
 ├── schema.sql
 ├── schema_fresh_install_DELETES_ALL_DATA.sql
-└── tests/match.test.mjs
+└── tests/*.test.mjs
 ```
 
 ## Tester
 
-Kjør Smart Match-enhetstestene med:
+Kjør hele den lokale testsuiten med:
 
 ```bash
-node tests/match.test.mjs
-node tests/storage-utils.test.mjs
-node tests/payment-rules.test.mjs
-node tests/payment-security.test.mjs
-node tests/stripe-payment-security.test.mjs
-node tests/webhook-signature.test.mjs
-node tests/vipps-login-security.test.mjs
-node tests/avatar-crop.test.mjs
-node tests/p0-regressions.test.mjs
-node tests/listing-video.test.mjs
-node tests/school-proximity.test.mjs
-node tests/usability.test.mjs
-node tests/unlimited-images.test.mjs
+npm test
+npm run build
 ```
 
-Siste lokale kjøring besto med 13 Smart Match-tester, 9 Storage-/medietester,
-12 betalingsregeltester, 4 Vipps webhook-signaturtester, 25 statiske
-betalingssikkerhetskontroller, 42 Vipps Login-sikkerhetskontroller og 6
-tester av flyttbart/zoombart profilbildeutsnitt, 8 P0-regresjonskontroller,
-19 kontroller av annonsevideo/fremheving, 18 kontroller av skolenærhet, 30
-brukervennlighetskontroller og 8 kontroller av bildeopplasting uten fast
-antallsgrense – 194 kontroller totalt. Frontend-
-JavaScript og Edge Function-TypeScript besto syntakskontroll, og de sentrale
-sidene besto lokal desktop-/mobilkontroll uten horisontal overflow.
+Testsuiten dekker blant annet Smart Match og den fullstendige forklaringen,
+strømprisberegning, Storage/medier, profilbildeutsnitt, skolenærhet,
+annonsevideo, ubegrenset bildegalleri, meldingsregresjoner og serververifisert
+fremheving. Bygget skal i tillegg bekrefte at lokal Tailwind genereres og at
+den offentlige leveransen ikke inneholder eldre Vipps-verifiseringssider.
 
 Grunnmigreringene og alle sju Edge Functions ble installert i Supabase-
 prosjektet `wsfnnaiytweaarncewcr` 23. august 2026. Migreringen som fjerner den
@@ -455,12 +449,10 @@ prosjektet bekreftet start/svar/lesestatus/pauset samtale for meldinger samt
 serverpris, capture-leveranse, idempotens og avvisning av feil beløp for
 fremheving. All testdata ble rullet tilbake.
 
-De 18 påkrevde ende-til-ende-scenariene er spesifisert i
-`docs/VIPPS-TESTPLAN-2026-08-23.md`. De kan ikke ærlig merkes som bestått før
-Vipps test-sales-unit, testnøkler og webhook er konfigurert i portalene.
-Funksjonene rapporterer derfor foreløpig `login_ready=false` og
-`payment_ready=false`, og frontend deaktiverer knappene med en ærlig forklaring.
-Ingen ekte Vipps-betaling eller bankoppgjør er utført i denne leveransen.
+`docs/VIPPS-TESTPLAN-2026-08-23.md` oppbevares som historisk dokumentasjon.
+Vipps-flytene er ikke en del av den offentlige leveransen. Produksjonsbetaling
+for fremheving går via Stripe og må fortsatt verifiseres med en kontrollert
+testordre etter enhver endring av nøkler, webhook eller bankkonto.
 
 Før produksjonssetting må auth-e-post, Storage-RLS, meldings-RPC og responsive
 visninger testes mot et eget Supabase-testprosjekt. Ekstern e-postlevering,

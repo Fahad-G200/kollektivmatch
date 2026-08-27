@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -13,6 +13,15 @@ const privacy = read('privacy.html');
 const dashboard = read('dashboard.html');
 const dashboardJs = read('dashboard.js');
 const styles = read('css/style.css');
+const movingIn = read('moving-in.html');
+const movingInJs = read('moving-in.js');
+const htmlFiles = readdirSync(root).filter((name) => name.endsWith('.html'));
+
+htmlFiles.forEach((name) => {
+  const html = read(name);
+  assert.doesNotMatch(html, /cdn\.tailwindcss\.com/, `${name} skal ikke hente Tailwind fra CDN`);
+  assert.match(html, /css\/tailwind\.css/, `${name} skal laste den lokale Tailwind-filen`);
+});
 
 assert.match(index, /<details id="advanced-filters"/);
 assert.match(index, /id="advanced-filter-count"/);
@@ -52,4 +61,9 @@ assert.match(dashboardJs, /shortcutConversationsSummary\.textContent = `\$\{conv
 assert.doesNotMatch(dashboard, /Vipps|vipps/i);
 assert.doesNotMatch(dashboardJs, /Vipps|vipps/i);
 
-console.log('Brukervennlighet: 29 statiske kontroller besto.');
+assert.match(movingIn, /id="power-area"[\s\S]+NO1 · Østlandet[\s\S]+NO5 · Vestlandet/);
+assert.match(movingIn, /id="power-current-price"[\s\S]+id="power-average-price"[\s\S]+id="power-range-price"/);
+assert.match(movingInJs, /buildPowerPriceUrl\(new Date\(\), area\)/);
+assert.match(styles, /\.power-price-widget\s*\{/);
+
+console.log(`Brukervennlighet: ${33 + (htmlFiles.length * 2)} statiske kontroller besto.`);

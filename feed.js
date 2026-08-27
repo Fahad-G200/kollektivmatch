@@ -44,6 +44,35 @@ function isEffectivelyFeatured(listing) {
   return Boolean(listing.is_featured && (!listing.featured_until || new Date(listing.featured_until) > new Date()));
 }
 
+function matchLevel(percentage) {
+  if (percentage >= 95) return 'Oppfylt';
+  if (percentage >= 60) return 'Delvis';
+  return 'Lite samsvar';
+}
+
+function matchBreakdownTemplate(match) {
+  if (!Array.isArray(match?.breakdown) || !match.breakdown.length) return '';
+  const rows = match.breakdown.map((item) => {
+    const percentage = Math.max(0, Math.min(100, Number(item.percentage) || 0));
+    return `
+      <li class="match-breakdown-row">
+        <div class="match-breakdown-label">
+          <span>${escapeHtml(item.label)}</span>
+          <span>${percentage}% · ${matchLevel(percentage)}</span>
+        </div>
+        <progress class="match-breakdown-progress" max="100" value="${percentage}" aria-label="${escapeHtml(item.label)}: ${percentage} prosent"></progress>
+        <p>${escapeHtml(item.detail)}</p>
+      </li>`;
+  }).join('');
+
+  return `
+    <details class="match-breakdown-card">
+      <summary>Hvorfor ${Number(match.score)} %?</summary>
+      <p class="match-breakdown-intro">Prosenten beregnes bare fra opplysninger både du og annonsen har fylt ut.</p>
+      <ul>${rows}</ul>
+    </details>`;
+}
+
 function hasEnoughPreferences(profile) {
   if (!profile) return false;
   return [
@@ -132,6 +161,7 @@ function cardTemplate(listing) {
     listing._ownerProfile?.is_verified
       ? '<span class="text-[10px] font-semibold text-[#5A3EC2] bg-[#F4F2FF] px-2 py-0.5 rounded-full">✓ Utdannings-e-post</span>' : '',
   ].join('');
+  const matchBreakdown = matchBreakdownTemplate(listing._match);
 
   return `
     <article class="bg-white rounded-2xl overflow-hidden border border-line hover:shadow-lg hover:shadow-ink/5 transition-all relative">
@@ -155,6 +185,7 @@ function cardTemplate(listing) {
           </div>
         </div>
       </a>
+      ${matchBreakdown}
       <div class="px-4 pb-4 flex items-center justify-between gap-3">
         <span>${preferencePrompt}</span>
         <button type="button" data-share-listing="${escapeHtml(listing.id)}" data-share-title="${title}" data-share-city="${city}" data-share-price="${escapeHtml(listing.price)}" class="listing-share-button" aria-label="Del ${title}">

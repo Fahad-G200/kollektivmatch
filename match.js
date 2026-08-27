@@ -79,10 +79,19 @@ export function buildMatchPreferences(profile, filters = {}) {
   return preferences;
 }
 
-function addCriterion(state, weight, ratio, explanation, alwaysExplain = false) {
+function addCriterion(state, weight, ratio, label, detail = '', alwaysExplain = false) {
+  const normalizedRatio = Math.max(0, Math.min(1, ratio));
   state.weight += weight;
-  state.points += weight * Math.max(0, Math.min(1, ratio));
-  if ((ratio >= 0.99 || alwaysExplain) && explanation) state.explanations.push(explanation);
+  state.points += weight * normalizedRatio;
+  state.breakdown.push({
+    label,
+    detail: detail || label,
+    percentage: Math.round(normalizedRatio * 100),
+    weight,
+  });
+  if ((normalizedRatio >= 0.99 || alwaysExplain) && (detail || label)) {
+    state.explanations.push(detail || label);
+  }
 }
 
 export function schoolProximityRatio(distanceKm) {
@@ -106,14 +115,14 @@ export function computeMatch(listing, profile, context = {}) {
   if (!listing || (!profile && !school)) return null;
   const preferences = profile || {};
 
-  const state = { points: 0, weight: 0, criteria: 0, explanations: [] };
+  const state = { points: 0, weight: 0, criteria: 0, explanations: [], breakdown: [] };
 
   const wantedLocation = String(preferences.search_location || '').trim();
   const listingLocations = [listing.city, listing.area]
     .map((value) => String(value || '').trim())
     .filter(Boolean);
   if (wantedLocation && listingLocations.length) {
-    addCriterion(state, 25, locationMatchRatio(wantedLocation, listingLocations), 'Riktig område');
+    addCriterion(state, 25, locationMatchRatio(wantedLocation, listingLocations), 'Område', 'Riktig område');
     state.criteria += 1;
   }
 
@@ -121,7 +130,7 @@ export function computeMatch(listing, profile, context = {}) {
     const budget = Number(preferences.monthly_budget_max);
     const price = Number(listing.price);
     const ratio = price <= budget ? 1 : Math.max(0, 1 - ((price - budget) / budget) / 0.5);
-    addCriterion(state, 35, ratio, 'Innenfor budsjett');
+    addCriterion(state, 35, ratio, 'Budsjett', 'Innenfor budsjett');
     state.criteria += 1;
   }
 
@@ -129,13 +138,13 @@ export function computeMatch(listing, profile, context = {}) {
     ? preferences.preferred_property_types.filter(Boolean)
     : [];
   if (preferredTypes.length && listing.property_type) {
-    addCriterion(state, 25, preferredTypes.includes(listing.property_type) ? 1 : 0, 'Riktig boligtype');
+    addCriterion(state, 25, preferredTypes.includes(listing.property_type) ? 1 : 0, 'Boligtype', 'Riktig boligtype');
     state.criteria += 1;
   }
 
   if (preferences.occupation) {
     const accepted = Array.isArray(listing.preferred_occupations) ? listing.preferred_occupations : [];
-    addCriterion(state, 15, !accepted.length || accepted.includes(preferences.occupation) ? 1 : 0, 'Passer din hverdag');
+    addCriterion(state, 15, !accepted.length || accepted.includes(preferences.occupation) ? 1 : 0, 'Hverdag', 'Passer din hverdag');
     state.criteria += 1;
   }
 
@@ -143,7 +152,7 @@ export function computeMatch(listing, profile, context = {}) {
     const desired = new Date(`${preferences.desired_move_in_date}T00:00:00`);
     const available = listing.move_in_date ? new Date(`${listing.move_in_date}T00:00:00`) : null;
     const ratio = !available || available <= desired ? 1 : 0;
-    addCriterion(state, 15, ratio, 'Passer innflyttingen');
+    addCriterion(state, 15, ratio, 'Innflytting', 'Passer innflyttingen');
     state.criteria += 1;
   }
 
@@ -157,7 +166,7 @@ export function computeMatch(listing, profile, context = {}) {
     const ratio = transitMinutes <= maxTransitMinutes
       ? 1
       : Math.max(0, 1 - ((transitMinutes - maxTransitMinutes) / Math.max(maxTransitMinutes, 5)));
-    addCriterion(state, 20, ratio, 'Kort vei til kollektivtransport');
+    addCriterion(state, 20, ratio, 'Kollektivtransport', 'Kort vei til kollektivtransport');
     state.criteria += 1;
   }
 
@@ -168,7 +177,7 @@ export function computeMatch(listing, profile, context = {}) {
   ];
   if (priorities.length && listingTags.length) {
     const matches = priorities.filter((tag) => listingTags.includes(tag)).length;
-    addCriterion(state, 30, matches / priorities.length, `${matches} av ${priorities.length} ønsker oppfylt`);
+    addCriterion(state, 30, matches / priorities.length, 'Ønsker', `${matches} av ${priorities.length} ønsker oppfylt`);
     state.criteria += 1;
   }
 
@@ -183,7 +192,14 @@ export function computeMatch(listing, profile, context = {}) {
       const roundedDistance = schoolDistanceKm < 10
         ? schoolDistanceKm.toLocaleString('nb-NO', { maximumFractionDigits: 1 })
         : Math.round(schoolDistanceKm).toLocaleString('nb-NO');
-      addCriterion(state, 40, proximityRatio, `${roundedDistance} km fra ${school.name || 'valgt skole'}`, true);
+      addCriterion(
+        state,
+        40,
+        proximityRatio,
+        'Skoleavstand',
+        `${roundedDistance} km fra ${school.name || 'valgt skole'}`,
+        true,
+      );
       state.criteria += 1;
     }
   }
@@ -200,6 +216,7 @@ export function computeMatch(listing, profile, context = {}) {
     confidence,
     isSchoolOnly: state.criteria === 1 && schoolDistanceKm !== null,
     schoolDistanceKm,
+    breakdown: state.breakdown,
   };
 }
 

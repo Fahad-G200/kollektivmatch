@@ -6,28 +6,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <title>Nyinnflyttet? – KollektivMatch</title>
 <meta name="description" content="Samlet oversikt over strøm, internett og innboforsikring for deg som nettopp har flyttet inn i et nytt kollektiv." />
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          cream: '#FAF9F6', ink: '#211C33', mist: '#6B667E', line: '#E7E3F5',
-          primary: {
-            50: '#F4F2FF', 100: '#ECE7FF', 200: '#DAD0FF', 300: '#BFABFF',
-            400: '#9F7CFF', 500: '#8449FF', 600: '#6C4CE0', 700: '#5A3EC2',
-            800: '#4A349E', 900: '#3D2E7D',
-          },
-        },
-        fontFamily: {
-          display: ['"Space Grotesk"', 'sans-serif'],
-          sans: ['"Inter"', 'sans-serif'],
-        },
-        borderRadius: { '4xl': '2rem' },
-      },
-    },
-  };
-</script>
+<link rel="stylesheet" href="css/tailwind.css?v=20260827-1" />
 <link rel="stylesheet" href="css/style.css?v=20260823-6" />
 </head>
 <body class="bg-cream text-ink font-sans antialiased">
@@ -96,6 +75,33 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
       </div>
       <h2 class="font-display font-bold text-xl md:text-2xl">Strøm</h2>
+    </div>
+    <div class="power-price-widget" aria-labelledby="power-price-title">
+      <div class="power-price-widget__header">
+        <div>
+          <p class="section-kicker">Live prisoversikt</p>
+          <h3 id="power-price-title">Dagens spotpris</h3>
+          <p>Velg prisområdet boligen ligger i.</p>
+        </div>
+        <label for="power-area">
+          <span>Prisområde</span>
+          <select id="power-area">
+            <option value="NO1">NO1 · Østlandet</option>
+            <option value="NO2">NO2 · Sørlandet</option>
+            <option value="NO3">NO3 · Midt-Norge</option>
+            <option value="NO4">NO4 · Nord-Norge</option>
+            <option value="NO5">NO5 · Vestlandet</option>
+          </select>
+        </label>
+      </div>
+      <p id="power-price-status" class="power-price-status" role="status" aria-live="polite">Henter dagens spotpriser …</p>
+      <div id="power-price-values" class="power-price-values hidden">
+        <div><span>Denne timen</span><strong id="power-current-price">–</strong></div>
+        <div><span>Dagens snitt</span><strong id="power-average-price">–</strong></div>
+        <div><span>Lavest–høyest</span><strong id="power-range-price">–</strong></div>
+      </div>
+      <button id="power-price-retry" class="power-price-retry hidden" type="button">Prøv igjen</button>
+      <p class="power-price-note">Spotpris er ikke det samme som total strømregning. Nettleie, avgifter, leverandørpåslag og eventuell strømstøtte kan endre beløpet. Data fra <a href="https://www.hvakosterstrommen.no/strompris-api" target="_blank" rel="noopener noreferrer">Hva koster strømmen?</a></p>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="moving-service-card bg-white rounded-2xl border border-line p-5 flex flex-col">
@@ -216,5 +222,6 @@
   </div>
 </footer>
 
+<script type="module" src="moving-in.js?v=20260827-1"></script>
 </body>
 </html>

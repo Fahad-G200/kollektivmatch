@@ -26,6 +26,17 @@ const complete = computeMatch(baseListing, {
 });
 assert.equal(complete.score, 100);
 assert.match(complete.explanation, /Innenfor budsjett/);
+assert.deepEqual(
+  complete.breakdown.map(({ label, percentage }) => ({ label, percentage })),
+  [
+    { label: 'Budsjett', percentage: 100 },
+    { label: 'Boligtype', percentage: 100 },
+    { label: 'Hverdag', percentage: 100 },
+    { label: 'Innflytting', percentage: 100 },
+    { label: 'Ønsker', percentage: 100 },
+  ],
+  'Alle vurderte kriterier skal følge resultatet som en forståelig forklaring',
+);
 
 const missingListingData = computeMatch(
   { ...baseListing, property_type: null, lifestyle_tags: [], amenities: [] },
@@ -120,6 +131,10 @@ const filterMismatch = computeMatch({
   lifestyle_tags: [],
 }, filteredPreferences);
 assert.ok(filterMismatch.score < filteredMatch.score, 'Avvik fra de aktive filtrene skal redusere matchprosenten');
+assert.ok(
+  filterMismatch.breakdown.some(({ percentage }) => percentage < 100),
+  'Delvise og svake treff skal vises i matchforklaringen, ikke skjules',
+);
 
 const missingTransit = computeMatch(
   { ...baseListing, transit_minutes: null },
@@ -134,4 +149,4 @@ assert.ok(compareBestMatch(sameScoreSolid, sameScoreThin) < 0, 'Lik prosent skal
 const feedSource = readFileSync(new URL('../feed.js', import.meta.url), 'utf8');
 assert.match(feedSource, /rankAllMatchResults[\s\S]+MAX_CLIENT_RANKED_RESULTS[\s\S]+data\.sort\(compareBestMatch\)[\s\S]+data = data\.slice/, 'Beste match skal rangeres før paginering');
 
-console.log('Smart Match: 19 tester besto.');
+console.log('Smart Match: 21 tester besto.');

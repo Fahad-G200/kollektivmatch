@@ -34,6 +34,26 @@ function formatDate(date) {
   return date ? new Date(`${date}T00:00:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 }
 
+function matchLevel(percentage) {
+  if (percentage >= 95) return 'Oppfylt';
+  if (percentage >= 60) return 'Delvis';
+  return 'Lite samsvar';
+}
+
+function matchBreakdown(match) {
+  if (!Array.isArray(match?.breakdown) || !match.breakdown.length) return '';
+  const rows = match.breakdown.map((item) => {
+    const percentage = Math.max(0, Math.min(100, Number(item.percentage) || 0));
+    return `
+      <li class="match-breakdown-row">
+        <div class="match-breakdown-label"><span>${escapeHtml(item.label)}</span><span>${percentage}% · ${matchLevel(percentage)}</span></div>
+        <progress class="match-breakdown-progress" max="100" value="${percentage}" aria-label="${escapeHtml(item.label)}: ${percentage} prosent"></progress>
+        <p>${escapeHtml(item.detail)}</p>
+      </li>`;
+  }).join('');
+  return `<details class="match-breakdown-card match-breakdown-card--seeker"><summary>Hvorfor ${Number(match.score)} %?</summary><p class="match-breakdown-intro">Prosenten bruker bare opplysninger som finnes i både profilen og annonsen.</p><ul>${rows}</ul></details>`;
+}
+
 function selectedListing() {
   return listings.find((listing) => listing.id === select.value) || null;
 }
@@ -71,6 +91,7 @@ function seekerCard(seeker) {
       ${tags.length ? `<div class="flex flex-wrap gap-1.5 mt-4">${tags.map((tag) => `<span class="seeker-preference-chip">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
       ${match?.explanation ? `<p class="mt-4 text-xs font-semibold text-primary-700">${escapeHtml(match.explanation)}</p>` : ''}
       ${matchBasis ? `<p class="mt-1 text-[11px] text-mist">Matchgrunnlag: ${escapeHtml(matchBasis)}${match.confidence === 'limited' ? ' · begrenset' : ''}</p>` : ''}
+      ${matchBreakdown(match)}
       <button type="button" data-contact-seeker="${escapeHtml(seeker.id)}" class="mt-auto pt-5 w-full text-center"><span class="block px-4 py-2.5 rounded-xl bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-bold">Ta kontakt om annonsen</span></button>
     </article>`;
 }
