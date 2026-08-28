@@ -1,6 +1,12 @@
 import { supabase } from './supabase-config.js';
 import { showToast } from './ui.js';
-import { installImageFallback } from './storage-utils.js?v=20260823-4';
+import {
+  LISTING_IMAGES_BUCKET,
+  LISTING_VIDEOS_BUCKET,
+  PROFILE_AVATARS_BUCKET,
+  installImageFallback,
+  safePublicMediaUrl,
+} from './storage-utils.js?v=20260828-1';
 
 const id = new URLSearchParams(window.location.search).get('id');
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -51,7 +57,8 @@ function formatDate(value) {
 }
 
 function renderImages() {
-  const imageUrls = Array.isArray(listing.images) && listing.images.length ? listing.images : (listing.image_url ? [listing.image_url] : []);
+  const rawImageUrls = Array.isArray(listing.images) && listing.images.length ? listing.images : (listing.image_url ? [listing.image_url] : []);
+  const imageUrls = rawImageUrls.map((url) => safePublicMediaUrl(url, LISTING_IMAGES_BUCKET)).filter(Boolean);
   const mainImage = document.getElementById('listing-img');
   mainImage.src = imageUrls[0] || PLACEHOLDER_IMG;
   mainImage.alt = `Forsidebilde for ${listing.title}`;
@@ -73,10 +80,11 @@ function renderImages() {
 }
 
 function renderVideo() {
-  if (!listing.video_url) return;
+  const videoUrl = safePublicMediaUrl(listing.video_url, LISTING_VIDEOS_BUCKET);
+  if (!videoUrl) return;
   const section = document.getElementById('listing-video-section');
   const video = document.getElementById('listing-video');
-  video.src = listing.video_url;
+  video.src = videoUrl;
   video.setAttribute('aria-label', `Videovisning for ${listing.title}`);
   video.addEventListener('error', () => {
     section.classList.add('hidden');
@@ -93,9 +101,10 @@ async function renderTrustBadges() {
   const ownerName = ownerProfile?.full_name || 'KollektivMatch-bruker';
   document.getElementById('owner-name').textContent = ownerName;
   document.getElementById('owner-initials').textContent = ownerName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'KM';
-  if (ownerProfile?.avatar_url) {
+  const avatarUrl = safePublicMediaUrl(ownerProfile?.avatar_url, PROFILE_AVATARS_BUCKET);
+  if (avatarUrl) {
     const avatar = document.getElementById('owner-avatar');
-    avatar.src = ownerProfile.avatar_url;
+    avatar.src = avatarUrl;
     avatar.alt = `Profilbilde av ${ownerName}`;
     avatar.classList.remove('hidden');
     document.getElementById('owner-initials').classList.add('hidden');

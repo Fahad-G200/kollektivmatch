@@ -1,4 +1,4 @@
-import { PublicError, UUID_PATTERN, jsonResponse, safeErrorResponse } from '../_shared/http.ts';
+import { PublicError, UUID_PATTERN, jsonResponse, readTextBody, safeErrorResponse } from '../_shared/http.ts';
 import { recordPaymentEvent } from '../_shared/reconcile.ts';
 import { reconcileStripeOrder } from '../_shared/stripe-reconcile.ts';
 import { getStripeConfig, verifyStripeWebhook } from '../_shared/stripe.ts';
@@ -7,7 +7,7 @@ import { serviceClient } from '../_shared/supabase.ts';
 Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new PublicError(405, 'METHOD_NOT_ALLOWED', 'Metoden er ikke tillatt.');
-    const rawBody = await request.text();
+    const rawBody = await readTextBody(request, 256 * 1024);
     await verifyStripeWebhook(request, rawBody);
 
     let event: Record<string, any>;

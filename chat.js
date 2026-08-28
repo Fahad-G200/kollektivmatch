@@ -1,6 +1,7 @@
 import { supabase } from './supabase-config.js';
 import { rememberReturnTo } from './auth.js';
 import { showToast } from './ui.js';
+import { PROFILE_AVATARS_BUCKET, safePublicMediaUrl } from './storage-utils.js?v=20260828-1';
 
 const params = new URLSearchParams(window.location.search);
 const listingId = params.get('listing');
@@ -32,9 +33,10 @@ async function renderPeerIdentity() {
   document.getElementById('chat-peer-name').textContent = name;
   document.getElementById('chat-peer-initials').textContent = initials(name);
   document.getElementById('chat-peer-education').classList.toggle('hidden', profile?.is_verified !== true);
-  if (profile?.avatar_url) {
+  const avatarUrl = safePublicMediaUrl(profile?.avatar_url, PROFILE_AVATARS_BUCKET);
+  if (avatarUrl) {
     const avatar = document.getElementById('chat-peer-avatar');
-    avatar.src = profile.avatar_url;
+    avatar.src = avatarUrl;
     avatar.alt = `Profilbilde av ${name}`;
     avatar.classList.remove('hidden');
     document.getElementById('chat-peer-initials').classList.add('hidden');

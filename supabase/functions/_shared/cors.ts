@@ -17,10 +17,16 @@ function configuredOrigin() {
   }
 }
 
+function localOriginsEnabled() {
+  const appOrigin = configuredOrigin();
+  return (appOrigin !== null && LOCAL_ORIGINS.has(appOrigin))
+    || Deno.env.get('ALLOW_LOCAL_ORIGINS') === 'true';
+}
+
 export function isAllowedOrigin(request: Request) {
   const origin = request.headers.get('origin');
   if (!origin) return true;
-  return origin === configuredOrigin() || LOCAL_ORIGINS.has(origin);
+  return origin === configuredOrigin() || (localOriginsEnabled() && LOCAL_ORIGINS.has(origin));
 }
 
 export function requireAllowedOrigin(request: Request) {
@@ -46,4 +52,3 @@ export function handlePreflight(request: Request) {
   requireAllowedOrigin(request);
   return new Response(null, { status: 204, headers: corsHeaders(request) });
 }
-

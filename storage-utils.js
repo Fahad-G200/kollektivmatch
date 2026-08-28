@@ -1,19 +1,31 @@
 export const LISTING_IMAGES_BUCKET = 'listing-images';
 export const LISTING_VIDEOS_BUCKET = 'listing-videos';
 export const PROFILE_AVATARS_BUCKET = 'profile-avatars';
+export const SUPABASE_STORAGE_ORIGIN = 'https://wsfnnaiytweaarncewcr.supabase.co';
 
-export function getOwnedStoragePath(urlValue, userId) {
-  if (!urlValue || !userId) return null;
+function publicStoragePath(urlValue, bucket) {
+  if (!urlValue) return null;
   try {
     const url = new URL(urlValue);
-    const marker = `/storage/v1/object/public/${LISTING_IMAGES_BUCKET}/`;
-    const markerIndex = url.pathname.indexOf(marker);
-    if (markerIndex === -1) return null;
-    const path = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
-    return path.startsWith(`${userId}/`) && !path.includes('..') ? path : null;
+    if (url.origin !== SUPABASE_STORAGE_ORIGIN || url.username || url.password || url.search || url.hash) return null;
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    if (!url.pathname.startsWith(marker)) return null;
+    const path = decodeURIComponent(url.pathname.slice(marker.length));
+    if (!path || path.includes('\\') || path.split('/').some((part) => !part || part === '.' || part === '..')) return null;
+    return path;
   } catch {
     return null;
   }
+}
+
+export function safePublicMediaUrl(urlValue, bucket, fallback = '') {
+  return publicStoragePath(urlValue, bucket) ? String(urlValue) : fallback;
+}
+
+export function getOwnedStoragePath(urlValue, userId) {
+  if (!userId) return null;
+  const path = publicStoragePath(urlValue, LISTING_IMAGES_BUCKET);
+  return path?.startsWith(`${userId}/`) ? path : null;
 }
 
 export async function removeOwnedImages(client, urls, userId) {
@@ -27,17 +39,9 @@ export async function removeOwnedImages(client, urls, userId) {
 }
 
 export function getOwnedVideoPath(urlValue, userId) {
-  if (!urlValue || !userId) return null;
-  try {
-    const url = new URL(urlValue);
-    const marker = `/storage/v1/object/public/${LISTING_VIDEOS_BUCKET}/`;
-    const markerIndex = url.pathname.indexOf(marker);
-    if (markerIndex === -1) return null;
-    const path = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
-    return path.startsWith(`${userId}/`) && !path.includes('..') ? path : null;
-  } catch {
-    return null;
-  }
+  if (!userId) return null;
+  const path = publicStoragePath(urlValue, LISTING_VIDEOS_BUCKET);
+  return path?.startsWith(`${userId}/`) ? path : null;
 }
 
 export async function removeOwnedVideo(client, videoUrl, userId) {
@@ -48,17 +52,9 @@ export async function removeOwnedVideo(client, videoUrl, userId) {
 }
 
 export function getOwnedAvatarPath(urlValue, userId) {
-  if (!urlValue || !userId) return null;
-  try {
-    const url = new URL(urlValue);
-    const marker = `/storage/v1/object/public/${PROFILE_AVATARS_BUCKET}/`;
-    const markerIndex = url.pathname.indexOf(marker);
-    if (markerIndex === -1) return null;
-    const path = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
-    return path.startsWith(`${userId}/`) && !path.includes('..') ? path : null;
-  } catch {
-    return null;
-  }
+  if (!userId) return null;
+  const path = publicStoragePath(urlValue, PROFILE_AVATARS_BUCKET);
+  return path?.startsWith(`${userId}/`) ? path : null;
 }
 
 export async function removeOwnedAvatar(client, avatarUrl, userId) {

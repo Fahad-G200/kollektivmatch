@@ -151,8 +151,8 @@ document.getElementById('register-form')?.addEventListener('submit', async (even
   const button = document.getElementById('register-submit-btn');
   if (button.disabled) return;
 
-  if (form.password.value.length < 10) {
-    showToast('Passordet må være minst 10 tegn.', 'error');
+  if (form.password.value.length < 12) {
+    showToast('Passordet må være minst 12 tegn.', 'error');
     return;
   }
   if (!form.acceptTerms.checked) {

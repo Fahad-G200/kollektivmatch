@@ -2,7 +2,12 @@ import { supabase } from './supabase-config.js';
 import { showToast } from './ui.js';
 import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm } from './match.js?v=20260827-1';
 import { formatDistance } from './location-utils.js?v=20260825-1';
-import { installImageFallback } from './storage-utils.js?v=20260823-4';
+import {
+  LISTING_IMAGES_BUCKET,
+  PROFILE_AVATARS_BUCKET,
+  installImageFallback,
+  safePublicMediaUrl,
+} from './storage-utils.js?v=20260828-1';
 
 const grid = document.getElementById('listings-grid');
 const featuredSection = document.getElementById('featured-results');
@@ -147,15 +152,20 @@ function cardTemplate(listing) {
     <p class="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#EAF8F0] px-2 py-1 text-[11px] font-semibold text-[#207A45]" title="Omtrentlig luftlinje fra området i annonsen, ikke reisetid">
       ${PIN_ICON}<span>${escapeHtml(formatDistance(listing._match.schoolDistanceKm))} fra ${escapeHtml(listing._schoolName || 'valgt skole')}</span>
     </p>` : '';
-  const image = escapeHtml(listing.images?.[0] || listing.image_url || PLACEHOLDER_IMG);
+  const image = escapeHtml(safePublicMediaUrl(
+    listing.images?.[0] || listing.image_url,
+    LISTING_IMAGES_BUCKET,
+    PLACEHOLDER_IMG,
+  ));
   const title = escapeHtml(listing.title);
   const city = escapeHtml(listing.city);
   const area = listing.area ? `${escapeHtml(listing.area)}, ` : '';
   const propertyType = listing.property_type ? `<span class="text-xs text-mist">${escapeHtml(PROPERTY_LABELS[listing.property_type] || listing.property_type)}</span>` : '';
   const ownerName = escapeHtml(listing._ownerProfile?.full_name || 'KollektivMatch-bruker');
   const ownerInitials = escapeHtml((listing._ownerProfile?.full_name || 'KM').trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'KM');
-  const ownerPhoto = listing._ownerProfile?.avatar_url
-    ? `<img src="${escapeHtml(listing._ownerProfile.avatar_url)}" class="listing-owner-photo w-full h-full object-cover" alt="Profilbilde av ${ownerName}" /><span class="listing-owner-initials hidden" aria-hidden="true">${ownerInitials}</span>`
+  const ownerPhotoUrl = safePublicMediaUrl(listing._ownerProfile?.avatar_url, PROFILE_AVATARS_BUCKET);
+  const ownerPhoto = ownerPhotoUrl
+    ? `<img src="${escapeHtml(ownerPhotoUrl)}" class="listing-owner-photo w-full h-full object-cover" alt="Profilbilde av ${ownerName}" /><span class="listing-owner-initials hidden" aria-hidden="true">${ownerInitials}</span>`
     : `<span class="listing-owner-initials" aria-hidden="true">${ownerInitials}</span>`;
   const verified = [
     listing._ownerProfile?.is_verified

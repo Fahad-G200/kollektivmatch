@@ -36,7 +36,7 @@ assert.match(stripe, /crypto\.subtle\.sign\('HMAC'/);
 assert.match(stripe, /constantTimeEqual\(candidate, expected\)/);
 assert.match(stripe, /redirect\.hostname !== 'checkout\.stripe\.com'/);
 
-assert.match(webhook, /const rawBody = await request\.text\(\)[\s\S]+verifyStripeWebhook\(request, rawBody\)/s);
+assert.match(webhook, /const rawBody = await readTextBody\(request, 256 \* 1024\)[\s\S]+verifyStripeWebhook\(request, rawBody\)/s);
 assert.match(webhook, /checkout\.session\.completed/);
 assert.match(webhook, /event\.livemode/);
 assert.match(reconcile, /session\.amount_total !== order\.amount_ore/);

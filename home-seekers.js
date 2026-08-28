@@ -2,6 +2,7 @@ import { supabase } from './supabase-config.js';
 import { rememberReturnTo } from './auth.js';
 import { showToast } from './ui.js';
 import { computeMatch, compareBestMatch } from './match.js?v=20260827-1';
+import { PROFILE_AVATARS_BUCKET, safePublicMediaUrl } from './storage-utils.js?v=20260828-1';
 
 const select = document.getElementById('listing-select');
 const status = document.getElementById('seeker-status');
@@ -59,8 +60,9 @@ function selectedListing() {
 }
 
 function safeAvatar(seeker) {
-  return seeker.avatar_url
-    ? `<img src="${escapeHtml(seeker.avatar_url)}" alt="" class="seeker-avatar-image w-full h-full object-cover" /><span class="seeker-avatar-fallback hidden">${escapeHtml(initials(seeker.full_name))}</span>`
+  const avatarUrl = safePublicMediaUrl(seeker.avatar_url, PROFILE_AVATARS_BUCKET);
+  return avatarUrl
+    ? `<img src="${escapeHtml(avatarUrl)}" alt="" class="seeker-avatar-image w-full h-full object-cover" /><span class="seeker-avatar-fallback hidden">${escapeHtml(initials(seeker.full_name))}</span>`
     : `<span class="seeker-avatar-fallback">${escapeHtml(initials(seeker.full_name))}</span>`;
 }
 

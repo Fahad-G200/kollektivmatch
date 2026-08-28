@@ -4,13 +4,13 @@ KollektivMatch er en HTML/CSS/JavaScript-plattform for å finne og annonsere
 kollektivrom. Supabase brukes til Auth, PostgreSQL, RLS, Storage og Realtime.
 Next/Vinext-laget finnes bare for bygging og publisering hos OpenAI Sites;
 produktlogikken er fortsatt vanlig nettleser-JavaScript og er ikke avhengig av
-Next-spesifikke API-er. Tailwind bygges lokalt til `css/tailwind.css` og lastes
-ikke fra en CDN i nettleseren.
+Next-spesifikke API-er. Tailwind og den låste Supabase-klienten bygges lokalt;
+nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
 
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse ni migreringene i rekkefølge:
+skal du kjøre disse elleve migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -29,6 +29,10 @@ skal du kjøre disse ni migreringene i rekkefølge:
 `migrations/2026-08-26_home_seeker_profiles.sql`
 
 `migrations/2026-08-26_stripe_boost_fallback.sql`
+
+`migrations/2026-08-27_boost_delivery_guard.sql`
+
+`migrations/2026-08-28_media_and_input_hardening.sql`
 
 Migreringen er ikke-destruktiv og legger til felter, validering, funksjoner,
 rettigheter og policyer uten å slette eksisterende data. `schema.sql` er nå kun
@@ -58,8 +62,9 @@ npm run dev
 Utviklingskommandoen bygger først Tailwind lokalt og oppretter den offentlige
 leveransen uten eldre Vipps-verifiseringssider.
 
-Supabase-klienten er låst til `@supabase/supabase-js@2.111.0` i
-`supabase-config.js`; den flytende `@2`-importen brukes ikke.
+Supabase-klienten er låst til `@supabase/supabase-js@2.111.0` og bundtes til
+`public/supabase-config.js` under bygging. Den flytende `@2`-importen og direkte
+CDN-kjøring brukes ikke.
 
 ## Supabase Dashboard – konkret rekkefølge
 
@@ -73,7 +78,9 @@ Supabase-klienten er låst til `@supabase/supabase-js@2.111.0` i
    `migrations/2026-08-25_unlimited_listing_images.sql` og
    `migrations/2026-08-25_security_advisor_fixes.sql` og
    `migrations/2026-08-26_home_seeker_profiles.sql` og
-   `migrations/2026-08-26_stripe_boost_fallback.sql`. Alle er
+   `migrations/2026-08-26_stripe_boost_fallback.sql`,
+   `migrations/2026-08-27_boost_delivery_guard.sql` og
+   `migrations/2026-08-28_media_and_input_hardening.sql`. Alle er
    additive og skal ikke slette eksisterende brukere eller annonser.
 3. Åpne **Authentication → URL Configuration**.
 4. Sett **Site URL** til den faktiske rotadressen. Lokalt kan dette være
@@ -110,7 +117,7 @@ Supabase-klienten er låst til `@supabase/supabase-js@2.111.0` i
    Bekreft også `listing-videos`, som tillater én offentlig annonsevideo på maks
    50 MB i MP4-, WebM- eller MOV-format, lagret i brukerens egen mappe.
 9. Under **Authentication → Password Security** setter du minimumslengde til
-   minst 10 tegn. Aktiver lekkede-passord-kontroll dersom Supabase-planen støtter
+   minst 12 tegn. Aktiver lekkede-passord-kontroll dersom Supabase-planen støtter
    det.
 10. Kontroller Auth-rate limits, aktiver CAPTCHA på registrering/innlogging ved
     produksjonsbruk, og sett opp en egnet SMTP-leverandør med SPF, DKIM og DMARC.
@@ -312,8 +319,8 @@ brukeren godtar gjeldende vilkår; e-postskjemaets avkryssing dekker ikke OAuth.
 
 - Egen auth-callback håndterer `code`, implicit tokens, `token_hash`, utløpte
   lenker og sikker intern `returnTo`.
-- Bildevelgeren beholder flere valg, støtter drag-and-drop uten en fast
-  antallsgrense, rekkefølge og sekvensiell komprimering/opplasting til WebP.
+- Bildevelgeren beholder flere valg, støtter drag-and-drop, opptil 100 bilder,
+  rekkefølge og sekvensiell komprimering/opplasting til WebP.
   HEIC/HEIF avvises med en tydelig melding.
 - Hver annonse kan ha én valgfri boligvideo på maks 90 sekunder og 50 MB.
   Videoen forhåndsvises før publisering, vises med kontroller på annonsen og
@@ -377,9 +384,11 @@ en serverfunksjon, aldri i frontend, og merk annonsenes kilde tydelig.
   avgjørelser. Overvåk også personverninnboksen.
 - Dokumenter risikovurdering, tilgangsrevisjon, backup-gjenoppretting og rutine
   for sikkerhetsbrudd. Varslingsfristen til Datatilsynet kan være 72 timer.
-- Server nettstedet over HTTPS med HSTS og relevante sikkerhetsheadere.
-  Tailwind er lokalt bygget; Supabase-klienten bør også bundtes lokalt før en
-  streng CSP aktiveres.
+- Server nettstedet over HTTPS. `_headers` håndhever HSTS, streng CSP,
+  clickjacking-beskyttelse, minimal nettlesertilgang og `no-store` på sensitive
+  callback-, chat- og betalingssider; bekreft headerne på det publiserte domenet.
+- Rydd eventuelle gamle eksterne media-URL-er og valider deretter constraintene
+  `profiles_public_fields_hardened` og `listings_owned_media_urls` i databasen.
 - Ikke legg til analyse eller markedsføringssporing uten egen vurdering og gyldig
   forhåndssamtykke. Nødvendig sesjonslagring alene trenger ikke et kunstig banner.
 - Test RLS, Storage, meldingsbegrensning, eksport og sletting i et separat
@@ -417,6 +426,8 @@ kollektivmatch/
 ├── migrations/2026-08-25_security_advisor_fixes.sql
 ├── migrations/2026-08-26_home_seeker_profiles.sql
 ├── migrations/2026-08-26_stripe_boost_fallback.sql
+├── migrations/2026-08-27_boost_delivery_guard.sql
+├── migrations/2026-08-28_media_and_input_hardening.sql
 ├── supabase/config.toml
 ├── supabase/functions/{create-boost-payment,create-stripe-boost-payment,get-boost-payment-status,
 │   vipps-payment-webhook,refund-boost-payment,start-vipps-verification,
@@ -438,7 +449,7 @@ npm run build
 
 Testsuiten dekker blant annet Smart Match og den fullstendige forklaringen,
 strømprisberegning, Storage/medier, profilbildeutsnitt, skolenærhet,
-annonsevideo, ubegrenset bildegalleri, meldingsregresjoner og serververifisert
+annonsevideo, ressursbegrenset bildegalleri, meldingsregresjoner og serververifisert
 fremheving. Bygget skal i tillegg bekrefte at lokal Tailwind genereres og at
 den offentlige leveransen ikke inneholder eldre Vipps-verifiseringssider.
 

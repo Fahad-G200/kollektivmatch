@@ -1,4 +1,4 @@
-import { PublicError, jsonResponse, safeErrorResponse } from '../_shared/http.ts';
+import { PublicError, jsonResponse, readTextBody, safeErrorResponse } from '../_shared/http.ts';
 import { reconcileBoostOrder, recordPaymentEvent } from '../_shared/reconcile.ts';
 import { serviceClient } from '../_shared/supabase.ts';
 import { getVippsConfig } from '../_shared/vipps.ts';
@@ -7,7 +7,7 @@ import { verifyVippsWebhook } from '../_shared/webhook-auth.ts';
 Deno.serve(async (request) => {
   try {
     if (request.method !== 'POST') throw new PublicError(405, 'METHOD_NOT_ALLOWED', 'Metoden er ikke tillatt.');
-    const rawBody = await request.text();
+    const rawBody = await readTextBody(request, 256 * 1024);
     await verifyVippsWebhook(request, rawBody);
 
     let event: Record<string, any>;
@@ -47,4 +47,3 @@ Deno.serve(async (request) => {
     return safeErrorResponse(error);
   }
 });
-

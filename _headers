@@ -1,0 +1,35 @@
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; connect-src 'self' https://wsfnnaiytweaarncewcr.supabase.co wss://wsfnnaiytweaarncewcr.supabase.co https://api.kartverket.no https://www.hvakosterstrommen.no; font-src 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https://checkout.stripe.com; img-src 'self' data: blob: https://wsfnnaiytweaarncewcr.supabase.co; manifest-src 'self'; media-src 'self' blob: https://wsfnnaiytweaarncewcr.supabase.co; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Cross-Origin-Resource-Policy: same-origin
+  Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=(), browsing-topics=()
+  Referrer-Policy: no-referrer
+  Strict-Transport-Security: max-age=63072000
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+
+/auth-callback.html
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/reset-password.html
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/boost-payment-result.html
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/dashboard.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/chat.html
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/create-listing.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/home-seekers.html
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex, nofollow, noarchive

@@ -7,7 +7,8 @@ import {
   installImageFallback,
   removeOwnedImages,
   removeOwnedVideo,
-} from './storage-utils.js?v=20260825-2';
+  safePublicMediaUrl,
+} from './storage-utils.js?v=20260828-1';
 import { geocodeListingArea } from './location-utils.js?v=20260825-1';
 
 const form = document.getElementById('create-listing-form');
@@ -35,6 +36,8 @@ const editId = new URLSearchParams(window.location.search).get('edit');
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_SOURCE_SIZE = 25 * 1024 * 1024;
 const MAX_UPLOAD_SIZE = 5.5 * 1024 * 1024;
+const MAX_IMAGES = 100;
+const MAX_IMAGE_PIXELS = 40_000_000;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const ALLOWED_VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
@@ -80,7 +83,9 @@ function renderImages() {
     card.className = 'relative rounded-xl border border-line bg-white p-1.5';
 
     const image = document.createElement('img');
-    image.src = item.kind === 'file' ? item.previewUrl : item.url;
+    image.src = item.kind === 'file'
+      ? item.previewUrl
+      : safePublicMediaUrl(item.url, LISTING_IMAGES_BUCKET, 'assets/placeholder.svg');
     image.alt = index === 0 ? 'Forhåndsvisning av forsidebilde' : `Forhåndsvisning av bilde ${index + 1}`;
     image.className = 'w-full aspect-square object-cover rounded-lg bg-primary-50';
     installImageFallback(image, PLACEHOLDER_IMG);
@@ -121,6 +126,10 @@ function addFiles(fileList) {
   clearFileErrors();
   const fingerprints = new Set(imageItems.filter((item) => item.kind === 'file').map((item) => item.fingerprint));
   for (const file of Array.from(fileList)) {
+    if (imageItems.length >= MAX_IMAGES) {
+      addFileError(`Du kan laste opp maks ${MAX_IMAGES} bilder per annonse.`);
+      break;
+    }
     if (isHeic(file)) {
       addFileError(`«${file.name}» er HEIC/HEIF. Eksporter bildet som JPG, PNG eller WebP først.`);
       continue;
@@ -191,7 +200,9 @@ function renderVideo() {
     videoPreviewCard.classList.add('hidden');
     return;
   }
-  videoPreview.src = videoItem.kind === 'file' ? videoItem.previewUrl : videoItem.url;
+  videoPreview.src = videoItem.kind === 'file'
+    ? videoItem.previewUrl
+    : safePublicMediaUrl(videoItem.url, LISTING_VIDEOS_BUCKET);
   videoPreviewCard.classList.remove('hidden');
   videoMeta.textContent = videoItem.kind === 'file'
     ? `${videoItem.file.name} · ${formatFileSize(videoItem.file.size)} · ${Math.ceil(videoItem.duration)} sek`
@@ -420,6 +431,10 @@ function canvasToBlob(canvas, quality) {
 
 async function compressImage(file) {
   const bitmap = await loadBitmap(file);
+  if (bitmap.width * bitmap.height > MAX_IMAGE_PIXELS) {
+    bitmap.close?.();
+    throw new Error(`«${file.name}» har for høy bildeoppløsning.`);
+  }
   let scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
   let blob = null;
 
@@ -565,9 +580,11 @@ async function loadForEdit() {
   checkBoxes('lifestyle_tags', listing.lifestyle_tags);
   checkBoxes('preferred_occupations', listing.preferred_occupations);
   const oldImages = Array.isArray(listing.images) && listing.images.length ? listing.images : (listing.image_url ? [listing.image_url] : []);
-  originalExistingImages = [...new Set(oldImages)];
+  originalExistingImages = [...new Set(oldImages)]
+    .map((url) => safePublicMediaUrl(url, LISTING_IMAGES_BUCKET))
+    .filter(Boolean);
   imageItems = originalExistingImages.map((url) => ({ id: crypto.randomUUID(), kind: 'existing', url }));
-  originalExistingVideo = listing.video_url || null;
+  originalExistingVideo = safePublicMediaUrl(listing.video_url, LISTING_VIDEOS_BUCKET) || null;
   videoItem = originalExistingVideo ? { kind: 'existing', url: originalExistingVideo } : null;
   const hasStoredLocation = listing.location_lat !== null && listing.location_lat !== undefined
     && listing.location_lon !== null && listing.location_lon !== undefined

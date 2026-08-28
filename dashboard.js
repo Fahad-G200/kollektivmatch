@@ -9,7 +9,8 @@ import {
   removeOwnedAvatar,
   removeOwnedImages,
   removeOwnedVideo,
-} from './storage-utils.js?v=20260825-2';
+  safePublicMediaUrl,
+} from './storage-utils.js?v=20260828-1';
 import { clampCropOffset, getCropDrawRect } from './avatar-crop.js?v=20260825-1';
 
 const listingsContainer = document.getElementById('my-listings');
@@ -161,8 +162,9 @@ function renderProfileAvatar(url, name) {
   const image = document.getElementById('profile-avatar');
   const initials = document.getElementById('profile-avatar-initials');
   initials.textContent = profileInitials(name);
-  if (url) {
-    image.src = `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`;
+  const avatarUrl = safePublicMediaUrl(url, PROFILE_AVATARS_BUCKET);
+  if (avatarUrl) {
+    image.src = `${avatarUrl}?v=${Date.now()}`;
     image.classList.remove('hidden');
     initials.classList.add('hidden');
     document.getElementById('profile-avatar-remove').classList.remove('hidden');
@@ -307,7 +309,7 @@ async function openAvatarCrop(file) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('FORMAT');
   if (file.size > 8 * 1024 * 1024) throw new Error('SIZE');
   const bitmap = await createImageBitmap(file);
-  if (!bitmap.width || !bitmap.height) {
+  if (!bitmap.width || !bitmap.height || bitmap.width * bitmap.height > 25_000_000) {
     bitmap.close?.();
     throw new Error('IMAGE');
   }
@@ -556,8 +558,9 @@ async function loadConversations() {
   conversationsContainer.innerHTML = conversations.map(({ listingId, otherId, message, unread }) => {
     const profile = profileMap[otherId] || {};
     const name = profile.full_name || 'Bruker';
-    const avatar = profile.avatar_url
-      ? `<img src="${escapeHtml(profile.avatar_url)}" class="w-full h-full object-cover" alt="" />`
+    const avatarUrl = safePublicMediaUrl(profile.avatar_url, PROFILE_AVATARS_BUCKET);
+    const avatar = avatarUrl
+      ? `<img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="" />`
       : `<span>${escapeHtml(profileInitials(name))}</span>`;
     return `
       <a href="chat.html?listing=${encodeURIComponent(listingId)}&user=${encodeURIComponent(otherId)}" class="bg-white rounded-2xl border border-line p-5 hover:border-primary-200 block transition-colors">
@@ -567,7 +570,11 @@ async function loadConversations() {
 }
 
 function listingCard(item) {
-  const image = escapeHtml(item.images?.[0] || item.image_url || PLACEHOLDER_IMG);
+  const image = escapeHtml(safePublicMediaUrl(
+    item.images?.[0] || item.image_url,
+    LISTING_IMAGES_BUCKET,
+    PLACEHOLDER_IMG,
+  ));
   const hasStatus = Object.hasOwn(STATUS_LABELS, item.status);
   const featured = isEffectivelyFeatured(item);
   const paymentOpen = hasOpenBoostPayment(item.id);
