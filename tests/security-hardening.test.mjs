@@ -8,6 +8,7 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 const headers = read('_headers');
 const config = read('supabase-config.js');
 const prepare = read('scripts/prepare-public.mjs');
+const nextConfig = read('next.config.ts');
 const http = read('supabase/functions/_shared/http.ts');
 const cors = read('supabase/functions/_shared/cors.ts');
 const migration = read('migrations/2026-08-28_media_and_input_hardening.sql');
@@ -20,6 +21,10 @@ assert.match(headers, /Strict-Transport-Security: max-age=63072000/);
 assert.match(headers, /X-Content-Type-Options: nosniff/);
 assert.match(headers, /\/auth-callback\.html[\s\S]+Cache-Control: no-store/);
 assert.match(headers, /\/chat\.html[\s\S]+Cache-Control: no-store/);
+assert.match(nextConfig, /source: '\/:path\*'/);
+assert.match(nextConfig, /Content-Security-Policy/);
+assert.match(nextConfig, /Strict-Transport-Security/);
+assert.match(nextConfig, /privatePageHeaders/);
 
 assert.match(config, /from '@supabase\/supabase-js'/);
 assert.doesNotMatch(config, /https:\/\/esm\.sh/);
