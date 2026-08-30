@@ -10,7 +10,7 @@ nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse elleve migreringene i rekkefølge:
+skal du kjøre disse tolv migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -33,6 +33,8 @@ skal du kjøre disse elleve migreringene i rekkefølge:
 `migrations/2026-08-27_boost_delivery_guard.sql`
 
 `migrations/2026-08-28_media_and_input_hardening.sql`
+
+`migrations/2026-08-28_payment_and_storage_followup.sql`
 
 Migreringen er ikke-destruktiv og legger til felter, validering, funksjoner,
 rettigheter og policyer uten å slette eksisterende data. `schema.sql` er nå kun
@@ -80,7 +82,8 @@ CDN-kjøring brukes ikke.
    `migrations/2026-08-26_home_seeker_profiles.sql` og
    `migrations/2026-08-26_stripe_boost_fallback.sql`,
    `migrations/2026-08-27_boost_delivery_guard.sql` og
-   `migrations/2026-08-28_media_and_input_hardening.sql`. Alle er
+   `migrations/2026-08-28_media_and_input_hardening.sql` og
+   `migrations/2026-08-28_payment_and_storage_followup.sql`. Alle er
    additive og skal ikke slette eksisterende brukere eller annonser.
 3. Åpne **Authentication → URL Configuration**.
 4. Sett **Site URL** til den faktiske rotadressen. Lokalt kan dette være
@@ -288,9 +291,11 @@ serverkontroll har bekreftet riktig ordre, beløp, valuta og betalt status.
    `https://<PROJECT_REF>.supabase.co/functions/v1/stripe-payment-webhook` i
    Stripe Workbench og velg hendelsene `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`,
-   `checkout.session.async_payment_failed` og `checkout.session.expired`.
+   `checkout.session.async_payment_failed`, `checkout.session.expired` og
+   `charge.refunded`.
 6. Test vellykket betaling, avbrudd, utløp, feil signatur, feil beløp, dobbelt
-   webhook-kall og forlengelse av en eksisterende fremhevingsperiode.
+   webhook-kall, full refusjon og forlengelse av en eksisterende
+   fremhevingsperiode.
 7. Før ekte salg: fyll ut juridiske plassholdere i vilkår/personvern og sett
    `STRIPE_ENVIRONMENT=production`, live secret, ny live webhook-secret og
    `STRIPE_PRODUCTION_CONFIRMED=true`. Gjør én liten betaling og kontroller både
@@ -387,6 +392,9 @@ en serverfunksjon, aldri i frontend, og merk annonsenes kilde tydelig.
 - Server nettstedet over HTTPS. `_headers` håndhever HSTS, streng CSP,
   clickjacking-beskyttelse, minimal nettlesertilgang og `no-store` på sensitive
   callback-, chat- og betalingssider; bekreft headerne på det publiserte domenet.
+- Kjør oppfølgingsmigreringen fra 28. august 2026 før nye betalinger. Den låser
+  en annonse til ett åpent betalingsløp på tvers av Stripe og Vipps, isolerer
+  leverandørwebhooks og bruker Supabase Storage-feltet `owner_id`.
 - Rydd eventuelle gamle eksterne media-URL-er og valider deretter constraintene
   `profiles_public_fields_hardened` og `listings_owned_media_urls` i databasen.
 - Ikke legg til analyse eller markedsføringssporing uten egen vurdering og gyldig
@@ -428,6 +436,7 @@ kollektivmatch/
 ├── migrations/2026-08-26_stripe_boost_fallback.sql
 ├── migrations/2026-08-27_boost_delivery_guard.sql
 ├── migrations/2026-08-28_media_and_input_hardening.sql
+├── migrations/2026-08-28_payment_and_storage_followup.sql
 ├── supabase/config.toml
 ├── supabase/functions/{create-boost-payment,create-stripe-boost-payment,get-boost-payment-status,
 │   vipps-payment-webhook,refund-boost-payment,start-vipps-verification,

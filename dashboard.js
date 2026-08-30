@@ -570,6 +570,7 @@ async function loadConversations() {
 }
 
 function listingCard(item) {
+  const itemId = escapeHtml(item.id);
   const image = escapeHtml(safePublicMediaUrl(
     item.images?.[0] || item.image_url,
     LISTING_IMAGES_BUCKET,
@@ -580,17 +581,17 @@ function listingCard(item) {
   const paymentOpen = hasOpenBoostPayment(item.id);
   const statusOptions = hasStatus ? Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`).join('') : '';
   const statusControl = hasStatus
-    ? `<label class="text-xs font-semibold text-mist">Status<select data-action="status" data-id="${item.id}" ${paymentOpen ? 'disabled title="Status er låst mens betalingen kontrolleres"' : ''} class="block mt-1 px-3 py-2 rounded-lg border border-line bg-white text-sm text-ink disabled:opacity-60 disabled:cursor-not-allowed">${statusOptions}</select></label>`
+    ? `<label class="text-xs font-semibold text-mist">Status<select data-action="status" data-id="${itemId}" ${paymentOpen ? 'disabled title="Status er låst mens betalingen kontrolleres"' : ''} class="block mt-1 px-3 py-2 rounded-lg border border-line bg-white text-sm text-ink disabled:opacity-60 disabled:cursor-not-allowed">${statusOptions}</select></label>`
     : '<p class="text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">Statusstyring krever databaseoppdatering</p>';
   const featuredInfo = featured ? `<div class="featured-purchase-note"><strong>Fremhevet · kjøpt plassering</strong><span>til ${formatDate(item.featured_until)}</span></div>` : '';
   const paymentNote = paymentOpen ? '<p class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">Betaling kontrolleres. Status og sletting er midlertidig låst slik at fremhevingen kan leveres.</p>' : '';
-  const boostButton = hasStatus ? `<button type="button" data-action="boost" data-id="${item.id}" ${item.status !== 'active' || paymentOpen ? 'disabled' : ''} class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed">${paymentOpen ? 'Betaling pågår' : 'Fremhev annonse'}</button>` : '';
+  const boostButton = hasStatus ? `<button type="button" data-action="boost" data-id="${itemId}" ${item.status !== 'active' || paymentOpen ? 'disabled' : ''} class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed">${paymentOpen ? 'Betaling pågår' : 'Fremhev annonse'}</button>` : '';
   const seekersButton = item.status === 'active' ? `<a href="home-seekers.html?listing=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-[#FFF6EE] text-[#8A4E21] hover:bg-[#FCEBDD]">Finn boligsøkere</a>` : '';
   return `
-    <article class="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-4" data-listing-id="${item.id}">
+    <article class="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-4" data-listing-id="${itemId}">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="flex items-center gap-4 min-w-0"><div class="w-16 h-16 bg-primary-50 rounded-lg overflow-hidden shrink-0"><img src="${image}" class="listing-thumb w-full h-full object-cover" alt="${escapeHtml(item.title)}"></div><div class="min-w-0"><div class="flex items-center gap-2"><h3 class="font-bold text-lg truncate">${escapeHtml(item.title)}</h3>${item.video_url ? '<span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary-50 text-primary-700">Video</span>' : ''}</div><p class="text-sm text-mist">${new Intl.NumberFormat('nb-NO').format(item.price)} kr/mnd • ${escapeHtml(item.city)}</p><p class="text-xs text-mist mt-1">Opprettet ${formatTime(item.created_at)} · Oppdatert ${formatTime(item.updated_at || item.created_at)}</p></div></div>${statusControl}</div>
       ${featuredInfo}${paymentNote}
-      <div class="flex items-center gap-2 flex-wrap justify-end">${seekersButton}${boostButton}<a href="listing-detail.html?id=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-mist hover:bg-primary-50 rounded-lg">Se</a><a href="create-listing.html?edit=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg">Rediger</a><button type="button" data-action="delete" data-id="${item.id}" ${paymentOpen ? 'disabled title="Sletting er låst mens betalingen kontrolleres"' : ''} class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed">Slett</button></div>
+      <div class="flex items-center gap-2 flex-wrap justify-end">${seekersButton}${boostButton}<a href="listing-detail.html?id=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-mist hover:bg-primary-50 rounded-lg">Se</a><a href="create-listing.html?edit=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg">Rediger</a><button type="button" data-action="delete" data-id="${itemId}" ${paymentOpen ? 'disabled title="Sletting er låst mens betalingen kontrolleres"' : ''} class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed">Slett</button></div>
     </article>`;
 }
 
@@ -736,7 +737,16 @@ boostForm.addEventListener('submit', async (event) => {
     updateBoostPaymentMethod();
     return;
   }
-  window.location.assign(response.redirect_url);
+  try {
+    const redirect = new URL(response.redirect_url);
+    if (redirect.protocol !== 'https:' || redirect.hostname !== 'checkout.stripe.com') throw new Error('Ugyldig betalingsadresse');
+    window.location.assign(redirect.toString());
+  } catch {
+    errorBox.textContent = 'Betalingsleverandøren returnerte en ugyldig adresse. Prøv igjen senere.';
+    errorBox.classList.remove('hidden');
+    button.disabled = false;
+    updateBoostPaymentMethod();
+  }
 });
 
 listingsContainer.addEventListener('change', async (event) => {

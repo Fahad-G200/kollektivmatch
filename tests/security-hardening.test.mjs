@@ -21,6 +21,8 @@ assert.match(headers, /Strict-Transport-Security: max-age=63072000/);
 assert.match(headers, /X-Content-Type-Options: nosniff/);
 assert.match(headers, /\/auth-callback\.html[\s\S]+Cache-Control: no-store/);
 assert.match(headers, /\/chat\.html[\s\S]+Cache-Control: no-store/);
+assert.match(headers, /\/dashboard\.html[\s\S]+Cache-Control: no-store/);
+assert.match(headers, /\/create-listing\.html[\s\S]+Cache-Control: no-store/);
 assert.match(nextConfig, /source: '\/:path\*'/);
 assert.match(nextConfig, /Content-Security-Policy/);
 assert.match(nextConfig, /Strict-Transport-Security/);
@@ -46,4 +48,4 @@ assert.match(migration, /storage_quota_available\('listing-images', 500\)/);
 assert.match(migration, /storage_quota_available\('listing-videos', 20\)/);
 assert.match(migration, /name = auth\.uid\(\)::text \|\| '\/avatar\.webp'/);
 
-console.log('Sikkerhetsherding: 27 statiske kontroller besto.');
+console.log('Sikkerhetsherding: 29 statiske kontroller besto.');

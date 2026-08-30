@@ -11,6 +11,7 @@ type Order = Record<string, any> & {
   status: string;
   payment_provider: string;
   provider_session_id: string | null;
+  provider_payment_id: string | null;
 };
 
 async function rpcOrThrow(client: SupabaseClient, name: string, params: Record<string, unknown>) {
@@ -48,6 +49,17 @@ export async function reconcileStripeOrder(
   const paymentId = typeof session.payment_intent === 'string' ? session.payment_intent : null;
 
   if (session.payment_status === 'paid') {
+    if (!paymentId) {
+      throw new PublicError(409, 'PAYMENT_MISMATCH', 'Betalingsdetaljene stemmer ikke med ordren.');
+    }
+    const { error: paymentIdError } = await client.from('boost_orders')
+      .update({ provider_payment_id: paymentId })
+      .eq('id', order.id)
+      .eq('payment_provider', 'stripe');
+    if (paymentIdError) {
+      console.error('Stripe PaymentIntent kunne ikke lagres', { code: paymentIdError.code });
+      throw new PublicError(500, 'PAYMENT_STATE_ERROR', 'Betalingsstatusen kunne ikke oppdateres.');
+    }
     const captured = await rpcOrThrow(client, 'apply_captured_boost', {
       p_order_id: order.id,
       p_reference: order.reference,
@@ -55,7 +67,6 @@ export async function reconcileStripeOrder(
       p_currency: order.currency,
       p_psp_reference: null,
     });
-    await client.from('boost_orders').update({ provider_payment_id: paymentId }).eq('id', order.id);
     await recordPaymentEvent(client, order, 'PAYMENT_CONFIRMED', source, {
       eventKey: `stripe|${session.id}|paid`,
       pspReference: session.id,
@@ -83,4 +94,31 @@ export async function reconcileStripeOrder(
   }
 
   return order;
+}
+
+export async function reconcileStripeRefund(
+  client: SupabaseClient,
+  order: Order,
+  charge: Record<string, any>,
+) {
+  if (
+    order.payment_provider !== 'stripe'
+    || !order.provider_payment_id
+    || charge.payment_intent !== order.provider_payment_id
+    || charge.amount !== order.amount_ore
+    || String(charge.currency || '').toUpperCase() !== order.currency
+  ) {
+    throw new PublicError(409, 'PAYMENT_MISMATCH', 'Refusjonsdetaljene stemmer ikke med ordren.');
+  }
+  if (charge.refunded !== true || !Number.isInteger(charge.amount_refunded)
+      || charge.amount_refunded < order.amount_ore) {
+    return order;
+  }
+  return await rpcOrThrow(client, 'apply_boost_refund', {
+    p_order_id: order.id,
+    p_reference: order.reference,
+    p_refunded_amount_ore: charge.amount_refunded,
+    p_currency: order.currency,
+    p_psp_reference: null,
+  });
 }

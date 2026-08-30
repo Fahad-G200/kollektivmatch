@@ -14,6 +14,10 @@ type Order = Record<string, any> & {
   amount_ore: number;
   currency: string;
   status: string;
+  payment_provider: string;
+  listing_title: string;
+  product_name: string;
+  idempotency_key: string;
 };
 
 async function sha256Hex(value: string) {
@@ -61,7 +65,11 @@ export async function recordPaymentEvent(
 }
 
 function assertPaymentIdentity(order: Order, details: Record<string, any>) {
-  if (details.reference !== order.reference || !amountMatches(details.amount, order.amount_ore, order.currency)) {
+  if (
+    order.payment_provider !== 'vipps'
+    || details.reference !== order.reference
+    || !amountMatches(details.amount, order.amount_ore, order.currency)
+  ) {
     throw new PublicError(409, 'PAYMENT_MISMATCH', 'Betalingsdetaljene stemmer ikke med ordren.');
   }
 }
@@ -177,4 +185,3 @@ export async function reconcileBoostOrder(
 
   return await freshOrder(client, order.id);
 }
-

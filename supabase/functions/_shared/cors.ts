@@ -11,7 +11,16 @@ function configuredOrigin() {
   const value = Deno.env.get('APP_BASE_URL');
   if (!value) return null;
   try {
-    return new URL(value).origin;
+    const url = new URL(value);
+    if (
+      !['https:', 'http:'].includes(url.protocol)
+      || url.username
+      || url.password
+      || url.search
+      || url.hash
+      || url.pathname !== '/'
+    ) return null;
+    return url.origin;
   } catch {
     return null;
   }

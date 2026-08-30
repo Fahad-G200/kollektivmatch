@@ -34,6 +34,7 @@ Deno.serve(async (request) => {
       console.error('Kunne ikke opprette Stripe boost-ordre', { code: orderError?.code });
       const message = orderError?.message || '';
       if (/For mange betalingsforsøk/i.test(message)) throw new PublicError(429, 'RATE_LIMITED', 'For mange betalingsforsøk. Vent en stund og prøv igjen.');
+      if (/annen betaling.+pågår/i.test(message)) throw new PublicError(409, 'PAYMENT_ALREADY_OPEN', 'En annen betaling for denne annonsen pågår. Fullfør eller avbryt den først.');
       if (/Bare aktive annonser/i.test(message)) throw new PublicError(409, 'LISTING_NOT_ACTIVE', 'Bare aktive annonser kan fremheves.');
       if (/eier|fremheves av/i.test(message)) throw new PublicError(403, 'NOT_LISTING_OWNER', 'Du kan bare fremheve dine egne annonser.');
       throw new PublicError(400, 'ORDER_CREATE_FAILED', 'Betalingen kunne ikke opprettes. Kontroller valgene og prøv igjen.');

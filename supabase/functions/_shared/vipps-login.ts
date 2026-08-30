@@ -46,14 +46,14 @@ function notConfigured(): never {
 export function getVippsLoginConfig(): VippsLoginConfig {
   const environment = configured('VIPPS_ENVIRONMENT');
   const apiBase = configured('VIPPS_API_BASE_URL').replace(/\/$/, '');
-  const appBase = configured('APP_BASE_URL').replace(/\/$/, '');
+  const appBaseValue = configured('APP_BASE_URL');
   const clientId = configured('VIPPS_LOGIN_CLIENT_ID', 'VIPPS_CLIENT_ID');
   const clientSecret = configured('VIPPS_LOGIN_CLIENT_SECRET', 'VIPPS_CLIENT_SECRET');
   const subscriptionKey = configured('VIPPS_LOGIN_SUBSCRIPTION_KEY', 'VIPPS_SUBSCRIPTION_KEY');
   const msn = configured('VIPPS_LOGIN_MSN', 'VIPPS_MSN');
-  const supabaseUrl = configured('SUPABASE_URL').replace(/\/$/, '');
-  if (!environment || !apiBase || !appBase || !clientId || !clientSecret
-      || !subscriptionKey || !msn || !supabaseUrl) notConfigured();
+  const supabaseUrlValue = configured('SUPABASE_URL');
+  if (!environment || !apiBase || !appBaseValue || !clientId || !clientSecret
+      || !subscriptionKey || !msn || !supabaseUrlValue) notConfigured();
   if (environment !== 'test' && environment !== 'production') notConfigured();
   if (environment === 'test' && apiBase !== 'https://apitest.vipps.no') notConfigured();
   if (environment === 'production' && (
@@ -64,22 +64,36 @@ export function getVippsLoginConfig(): VippsLoginConfig {
   let appUrl: URL;
   let supabaseProjectUrl: URL;
   try {
-    appUrl = new URL(appBase);
-    supabaseProjectUrl = new URL(supabaseUrl);
+    appUrl = new URL(appBaseValue);
+    supabaseProjectUrl = new URL(supabaseUrlValue);
   } catch {
     notConfigured();
   }
-  if (appUrl!.protocol !== 'https:' || supabaseProjectUrl!.protocol !== 'https:') notConfigured();
+  if (
+    appUrl!.protocol !== 'https:'
+    || appUrl!.username
+    || appUrl!.password
+    || appUrl!.search
+    || appUrl!.hash
+    || appUrl!.pathname !== '/'
+    || supabaseProjectUrl!.protocol !== 'https:'
+    || supabaseProjectUrl!.username
+    || supabaseProjectUrl!.password
+    || supabaseProjectUrl!.search
+    || supabaseProjectUrl!.hash
+    || supabaseProjectUrl!.pathname !== '/'
+    || !supabaseProjectUrl!.hostname.endsWith('.supabase.co')
+  ) notConfigured();
 
   return {
     environment,
     apiBase,
-    appBase,
+    appBase: appUrl!.origin,
     clientId,
     clientSecret,
     subscriptionKey,
     msn,
-    callbackUrl: `${supabaseUrl}/functions/v1/vipps-verification-callback`,
+    callbackUrl: `${supabaseProjectUrl!.origin}/functions/v1/vipps-verification-callback`,
     forceAppAuth: configured('VIPPS_LOGIN_FORCE_APP_AUTH') === 'true',
   };
 }

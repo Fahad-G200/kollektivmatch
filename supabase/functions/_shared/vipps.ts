@@ -46,16 +46,27 @@ export function getVippsConfig(): VippsConfig {
       throw new PublicError(503, 'VIPPS_PAYMENT_NOT_CONFIGURED', 'Vipps-betaling er ikke aktivert ennå. Prøv igjen senere.');
     }
   }
-  const appBase = required('APP_BASE_URL').replace(/\/$/, '');
-  const appUrl = new URL(appBase);
-  if (appUrl.protocol !== 'https:') {
+  let appUrl: URL;
+  try {
+    appUrl = new URL(required('APP_BASE_URL'));
+  } catch {
+    throw new PublicError(503, 'VIPPS_PAYMENT_NOT_CONFIGURED', 'Vipps-betaling er ikke aktivert ennå. Prøv igjen senere.');
+  }
+  if (
+    appUrl.protocol !== 'https:'
+    || appUrl.username
+    || appUrl.password
+    || appUrl.search
+    || appUrl.hash
+    || appUrl.pathname !== '/'
+  ) {
     throw new PublicError(503, 'VIPPS_PAYMENT_NOT_CONFIGURED', 'Vipps-betaling er ikke aktivert ennå. Prøv igjen senere.');
   }
 
   return {
     environment,
     apiBase,
-    appBase,
+    appBase: appUrl.origin,
     clientId: required('VIPPS_CLIENT_ID'),
     clientSecret: required('VIPPS_CLIENT_SECRET'),
     subscriptionKey: required('VIPPS_SUBSCRIPTION_KEY'),
@@ -63,7 +74,10 @@ export function getVippsConfig(): VippsConfig {
   };
 }
 
-async function parseVippsResponse(response: Response) {
+async function parseVippsResponse(response: Response | null) {
+  if (!response) {
+    throw new PublicError(502, 'PAYMENT_PROVIDER_ERROR', 'Vipps kunne ikke behandle forespørselen nå. Prøv igjen.');
+  }
   const contentType = response.headers.get('content-type') || '';
   const body = contentType.includes('application/json') ? await response.json().catch(() => null) : null;
   if (!response.ok) {
@@ -85,7 +99,8 @@ export async function getAccessToken(config = getVippsConfig()) {
       'Merchant-Serial-Number': config.msn,
     },
     body: '',
-  });
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null);
   const body = await parseVippsResponse(response) as { access_token?: string; expires_in?: string | number };
   if (!body?.access_token) throw new Error('Vipps returnerte ikke access token.');
   const expiresIn = Math.max(60, Number(body.expires_in) || 3600);
@@ -123,7 +138,8 @@ export async function createVippsPayment(order: BoostOrder) {
       userFlow: 'WEB_REDIRECT',
       metadata: { orderId: order.id },
     }),
-  });
+    signal: AbortSignal.timeout(12_000),
+  }).catch(() => null);
   const body = await parseVippsResponse(response) as { redirectUrl?: string; reference?: string };
   if (!body?.redirectUrl || body.reference !== order.reference) throw new Error('Ugyldig create-respons fra Vipps.');
   const redirect = new URL(body.redirectUrl);
@@ -136,7 +152,8 @@ export async function getVippsPayment(reference: string) {
   const response = await fetch(`${config.apiBase}/epayment/v1/payments/${encodeURIComponent(reference)}`, {
     method: 'GET',
     headers: await vippsHeaders(undefined, config),
-  });
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null);
   return await parseVippsResponse(response) as Record<string, unknown>;
 }
 
@@ -146,7 +163,8 @@ export async function captureVippsPayment(order: BoostOrder) {
     method: 'POST',
     headers: await vippsHeaders(`capture-${order.id}`, config),
     body: JSON.stringify({ modificationAmount: { value: order.amount_ore, currency: order.currency } satisfies Amount }),
-  });
+    signal: AbortSignal.timeout(12_000),
+  }).catch(() => null);
   return await parseVippsResponse(response) as Record<string, unknown>;
 }
 
@@ -156,6 +174,7 @@ export async function refundVippsPayment(order: BoostOrder) {
     method: 'POST',
     headers: await vippsHeaders(`refund-${order.id}`, config),
     body: JSON.stringify({ modificationAmount: { value: order.amount_ore, currency: order.currency } satisfies Amount }),
-  });
+    signal: AbortSignal.timeout(12_000),
+  }).catch(() => null);
   return await parseVippsResponse(response) as Record<string, unknown>;
 }

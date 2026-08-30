@@ -28,11 +28,13 @@ Deno.serve(async (request) => {
       p_listing_id: listingId,
       p_product_id: productId,
       p_terms_version: '2026-08-23',
+      p_payment_provider: 'vipps',
     });
     if (orderError || !order) {
       console.error('Kunne ikke opprette boost-ordre', { code: orderError?.code });
       const message = orderError?.message || '';
       if (/For mange betalingsforsøk/i.test(message)) throw new PublicError(429, 'RATE_LIMITED', 'For mange betalingsforsøk. Vent en stund og prøv igjen.');
+      if (/annen betaling.+pågår/i.test(message)) throw new PublicError(409, 'PAYMENT_ALREADY_OPEN', 'En annen betaling for denne annonsen pågår. Fullfør eller avbryt den først.');
       if (/Bare aktive annonser/i.test(message)) throw new PublicError(409, 'LISTING_NOT_ACTIVE', 'Bare aktive annonser kan fremheves.');
       if (/eier|fremheves av/i.test(message)) throw new PublicError(403, 'NOT_LISTING_OWNER', 'Du kan bare fremheve dine egne annonser.');
       throw new PublicError(400, 'ORDER_CREATE_FAILED', 'Betalingen kunne ikke opprettes. Kontroller valgene og prøv igjen.');
@@ -56,4 +58,3 @@ Deno.serve(async (request) => {
     return safeErrorResponse(error, headers);
   }
 });
-

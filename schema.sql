@@ -10,6 +10,9 @@
 --   migrations/2026-08-25_security_advisor_fixes.sql
 --   migrations/2026-08-26_home_seeker_profiles.sql
 --   migrations/2026-08-26_stripe_boost_fallback.sql
+--   migrations/2026-08-27_boost_delivery_guard.sql
+--   migrations/2026-08-28_media_and_input_hardening.sql
+--   migrations/2026-08-28_payment_and_storage_followup.sql
 --
 -- En full førstegangsinstallasjon som SLETTER ALLE DATA ligger bevisst i:
 --   schema_fresh_install_DELETES_ALL_DATA.sql

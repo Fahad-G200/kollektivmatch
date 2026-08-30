@@ -16,6 +16,9 @@ type BoostOrder = Record<string, any> & {
   amount_ore: number;
   currency: string;
   idempotency_key: string;
+  payment_provider: string;
+  provider_session_id: string | null;
+  provider_payment_id: string | null;
 };
 
 function required(name: string) {
@@ -43,11 +46,19 @@ export function getStripeConfig(): StripeConfig {
     throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
   }
 
-  const appUrl = new URL(required('APP_BASE_URL'));
+  let appUrl: URL;
+  try {
+    appUrl = new URL(required('APP_BASE_URL'));
+  } catch {
+    throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
+  }
   if (environment === 'production' && appUrl.protocol !== 'https:') {
     throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
   }
   if (!['https:', 'http:'].includes(appUrl.protocol)) {
+    throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
+  }
+  if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash || appUrl.pathname !== '/') {
     throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
   }
 
@@ -55,7 +66,7 @@ export function getStripeConfig(): StripeConfig {
     environment,
     secretKey,
     apiBase: 'https://api.stripe.com',
-    appBase: appUrl.toString().replace(/\/$/, ''),
+    appBase: appUrl.origin,
   };
 }
 
@@ -73,7 +84,11 @@ async function stripeRequest(
       ...(options.idempotencyKey ? { 'idempotency-key': options.idempotencyKey } : {}),
     },
     body: options.body?.toString(),
-  });
+    signal: AbortSignal.timeout(12_000),
+  }).catch(() => null);
+  if (!response) {
+    throw new PublicError(502, 'PAYMENT_PROVIDER_ERROR', 'Betalingsleverandøren kunne ikke behandle forespørselen nå. Prøv igjen.');
+  }
   let value: Record<string, any> | null = null;
   try {
     value = await response.json();
@@ -130,6 +145,49 @@ export async function getStripeCheckoutSession(sessionId: string) {
     throw new PublicError(400, 'INVALID_PAYMENT_SESSION', 'Betalingssesjonen er ugyldig.');
   }
   return await stripeRequest(`/v1/checkout/sessions/${encodeURIComponent(sessionId)}`);
+}
+
+export async function refundStripePayment(order: BoostOrder) {
+  if (order.payment_provider !== 'stripe' || !order.provider_session_id) {
+    throw new PublicError(409, 'PAYMENT_MISMATCH', 'Betalingsdetaljene stemmer ikke med ordren.');
+  }
+  const session = await getStripeCheckoutSession(order.provider_session_id);
+  const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : '';
+  if (
+    session.id !== order.provider_session_id
+    || session.client_reference_id !== order.id
+    || session.metadata?.order_id !== order.id
+    || session.metadata?.reference !== order.reference
+    || session.payment_status !== 'paid'
+    || session.amount_total !== order.amount_ore
+    || String(session.currency || '').toUpperCase() !== order.currency
+    || !/^pi_[A-Za-z0-9_]{8,240}$/.test(paymentIntent)
+    || (order.provider_payment_id && order.provider_payment_id !== paymentIntent)
+  ) {
+    throw new PublicError(409, 'PAYMENT_MISMATCH', 'Betalingsdetaljene stemmer ikke med ordren.');
+  }
+
+  const body = new URLSearchParams();
+  body.set('payment_intent', paymentIntent);
+  body.set('amount', String(order.amount_ore));
+  body.set('metadata[order_id]', order.id);
+  body.set('metadata[reference]', order.reference);
+  const refund = await stripeRequest('/v1/refunds', {
+    method: 'POST',
+    body,
+    idempotencyKey: `refund-${order.idempotency_key}`,
+  });
+  if (
+    typeof refund.id !== 'string'
+    || !/^re_[A-Za-z0-9_]{8,240}$/.test(refund.id)
+    || refund.payment_intent !== paymentIntent
+    || refund.amount !== order.amount_ore
+    || String(refund.currency || '').toUpperCase() !== order.currency
+    || refund.status !== 'succeeded'
+  ) {
+    throw new PublicError(502, 'REFUND_NOT_CONFIRMED', 'Stripe har ikke bekreftet refusjonen.');
+  }
+  return refund;
 }
 
 function hex(bytes: ArrayBuffer) {

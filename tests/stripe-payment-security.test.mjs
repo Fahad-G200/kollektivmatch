@@ -38,10 +38,14 @@ assert.match(stripe, /redirect\.hostname !== 'checkout\.stripe\.com'/);
 
 assert.match(webhook, /const rawBody = await readTextBody\(request, 256 \* 1024\)[\s\S]+verifyStripeWebhook\(request, rawBody\)/s);
 assert.match(webhook, /checkout\.session\.completed/);
+assert.match(webhook, /charge\.refunded/);
 assert.match(webhook, /event\.livemode/);
 assert.match(reconcile, /session\.amount_total !== order\.amount_ore/);
 assert.match(reconcile, /session\.metadata\?\.reference !== order\.reference/);
 assert.match(reconcile, /session\.payment_status === 'paid'[\s\S]+apply_captured_boost/s);
+assert.match(reconcile, /provider_payment_id: paymentId[\s\S]+apply_captured_boost/s);
+assert.match(reconcile, /reconcileStripeRefund[\s\S]+apply_boost_refund/s);
+assert.match(stripe, /refundStripePayment[\s\S]+\/v1\/refunds[\s\S]+refund-\$\{order\.idempotency_key\}/s);
 assert.match(status, /payment_provider === 'stripe'[\s\S]+reconcileStripeOrder/s);
 assert.match(integrationStatus, /getStripeConfig\(\)/);
 assert.match(integrationStatus, /requireStripeWebhookSecret\(\)/);
@@ -72,4 +76,4 @@ const frontendFiles = walk(root).filter((path) => {
 const frontend = frontendFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
 assert.doesNotMatch(frontend, /sk_(?:test|live)_|whsec_|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET/);
 
-console.log('Stripe-fremheving: 37 sikkerhetskontroller besto.');
+console.log('Stripe-fremheving: 41 sikkerhetskontroller besto.');

@@ -21,6 +21,7 @@
   X-Robots-Tag: noindex, nofollow, noarchive
 
 /dashboard.html
+  Cache-Control: no-store, max-age=0
   X-Robots-Tag: noindex, nofollow, noarchive
 
 /chat.html
@@ -28,6 +29,7 @@
   X-Robots-Tag: noindex, nofollow, noarchive
 
 /create-listing.html
+  Cache-Control: no-store, max-age=0
   X-Robots-Tag: noindex, nofollow, noarchive
 
 /home-seekers.html

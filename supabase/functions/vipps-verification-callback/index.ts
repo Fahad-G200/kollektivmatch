@@ -9,11 +9,8 @@ import {
 } from '../_shared/vipps-login.ts';
 
 function safeResultUrl(result: 'completed' | 'cancelled' | 'failed') {
-  const appBase = Deno.env.get('APP_BASE_URL')?.trim().replace(/\/$/, '');
-  if (!appBase) return null;
   try {
-    const url = new URL(`${appBase}/vipps-verification-result.html`);
-    if (url.protocol !== 'https:') return null;
+    const url = new URL('/vipps-verification-result.html', getVippsLoginConfig().appBase);
     url.searchParams.set('result', result);
     return url.toString();
   } catch {
@@ -98,4 +95,3 @@ Deno.serve(async (request) => {
     return safeErrorResponse(error);
   }
 });
-

@@ -43,13 +43,11 @@ const nextConfig: NextConfig = {
         '/auth-callback.html',
         '/reset-password.html',
         '/boost-payment-result.html',
+        '/dashboard.html',
         '/chat.html',
+        '/create-listing.html',
         '/home-seekers.html',
       ].map((source) => ({ source, headers: privatePageHeaders })),
-      ...['/dashboard.html', '/create-listing.html'].map((source) => ({
-        source,
-        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }],
-      })),
     ];
   },
 };

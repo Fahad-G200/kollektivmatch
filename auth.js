@@ -15,7 +15,7 @@ const RETURN_TO_KEY = 'kmReturnTo';
 const AUTH_ERROR_MESSAGES = {
   'Invalid login credentials': 'Feil e-post eller passord.',
   'Email not confirmed': 'E-posten din er ikke bekreftet enda. Sjekk innboksen (og søppelpost) for bekreftelseslenken.',
-  'User already registered': 'Denne e-postadressen er allerede registrert. Prøv å logge inn i stedet.',
+  'User already registered': 'Hvis adressen kan brukes, får du videre informasjon på e-post.',
   'Password should be at least 6 characters': 'Passordet oppfyller ikke minimumskravet.',
 };
 
@@ -25,11 +25,12 @@ function friendlyAuthError(error, fallback = 'Noe gikk galt. Prøv igjen.') {
 }
 
 export function getSafeReturnTo(value, fallback = 'index.html') {
-  if (!value) return fallback;
+  if (typeof value !== 'string' || !value || value.length > 2048) return fallback;
   try {
     const target = new URL(value, document.baseURI);
-    if (target.origin !== window.location.origin) return fallback;
     if (!['http:', 'https:'].includes(target.protocol)) return fallback;
+    if (target.origin !== window.location.origin) return fallback;
+    if (target.username || target.password) return fallback;
     return target.href;
   } catch {
     return fallback;

@@ -26,7 +26,8 @@ Deno.serve(async (request) => {
     }
 
     const admin = serviceClient();
-    const { data: order, error } = await admin.from('boost_orders').select('*').eq('reference', reference).single();
+    const { data: order, error } = await admin.from('boost_orders').select('*')
+      .eq('reference', reference).eq('payment_provider', 'vipps').single();
     if (error || !order) throw new PublicError(404, 'ORDER_NOT_FOUND', 'Betalingsordren finnes ikke.');
     if (event.amount && (event.amount.value !== order.amount_ore || event.amount.currency !== order.currency)) {
       throw new PublicError(409, 'PAYMENT_MISMATCH', 'Webhookens beløp stemmer ikke med ordren.');
