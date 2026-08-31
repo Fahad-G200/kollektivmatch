@@ -60,6 +60,11 @@ let originalLocationText = null;
 let draftStorageEnabled = false;
 let draftSaveTimer = null;
 
+function isMissingFunctionError(error) {
+  return error?.code === 'PGRST202' || error?.code === '42883'
+    || /function.+does not exist|could not find.+function.+schema cache/i.test(error?.message || '');
+}
+
 function addFileError(message) {
   const line = document.createElement('p');
   line.textContent = message;
@@ -568,7 +573,10 @@ async function saveListing(fields) {
 async function loadForEdit() {
   if (!editId) return true;
   if (!UUID_PATTERN.test(editId)) return false;
-  const { data: listing, error } = await supabase.from('listings').select('*').eq('id', editId).single();
+  let { data: listing, error } = await supabase.rpc('get_my_listing', { p_listing_id: editId });
+  if (error && isMissingFunctionError(error)) {
+    ({ data: listing, error } = await supabase.from('listings').select('*').eq('id', editId).single());
+  }
   if (error || !listing || listing.user_id !== currentUser.id) return false;
 
   heading.textContent = 'Rediger annonse';

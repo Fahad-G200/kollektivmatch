@@ -602,7 +602,10 @@ function renderListings() {
 }
 
 async function loadListings() {
-  const { data, error } = await supabase.from('listings').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  let { data, error } = await supabase.rpc('get_my_listings');
+  if (error && isMissingFunctionError(error)) {
+    ({ data, error } = await supabase.from('listings').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }));
+  }
   if (error) {
     console.error('Kunne ikke hente annonser:', error.message);
     if (shortcutListingsSummary) shortcutListingsSummary.textContent = 'Kunne ikke laste annonsene';

@@ -10,7 +10,7 @@ nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse tolv migreringene i rekkefølge:
+skal du kjøre disse tretten migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -35,6 +35,8 @@ skal du kjøre disse tolv migreringene i rekkefølge:
 `migrations/2026-08-28_media_and_input_hardening.sql`
 
 `migrations/2026-08-28_payment_and_storage_followup.sql`
+
+`migrations/2026-08-31_contact_privacy_hardening.sql`
 
 Migreringen er ikke-destruktiv og legger til felter, validering, funksjoner,
 rettigheter og policyer uten å slette eksisterende data. `schema.sql` er nå kun
@@ -83,7 +85,8 @@ CDN-kjøring brukes ikke.
    `migrations/2026-08-26_stripe_boost_fallback.sql`,
    `migrations/2026-08-27_boost_delivery_guard.sql` og
    `migrations/2026-08-28_media_and_input_hardening.sql` og
-   `migrations/2026-08-28_payment_and_storage_followup.sql`. Alle er
+   `migrations/2026-08-28_payment_and_storage_followup.sql` og
+   `migrations/2026-08-31_contact_privacy_hardening.sql`. Alle er
    additive og skal ikke slette eksisterende brukere eller annonser.
 3. Åpne **Authentication → URL Configuration**.
 4. Sett **Site URL** til den faktiske rotadressen. Lokalt kan dette være
@@ -437,6 +440,7 @@ kollektivmatch/
 ├── migrations/2026-08-27_boost_delivery_guard.sql
 ├── migrations/2026-08-28_media_and_input_hardening.sql
 ├── migrations/2026-08-28_payment_and_storage_followup.sql
+├── migrations/2026-08-31_contact_privacy_hardening.sql
 ├── supabase/config.toml
 ├── supabase/functions/{create-boost-payment,create-stripe-boost-payment,get-boost-payment-status,
 │   vipps-payment-webhook,refund-boost-payment,start-vipps-verification,

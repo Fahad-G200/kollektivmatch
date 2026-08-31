@@ -17,6 +17,7 @@ const AMENITY_LABELS = { matbutikk: 'Matbutikk', kollektivtransport: 'Kollektivt
 const INCLUDED_LABELS = { strom: 'Strøm', internett: 'Internett', oppvarming: 'Oppvarming', vann: 'Vann' };
 let viewer = null;
 let listing = null;
+let contactLoadError = false;
 
 function isMissingColumnError(error) {
   return error?.code === 'PGRST204'
@@ -28,6 +29,11 @@ function isMissingReportsError(error) {
   return error?.code === '42P01'
     || error?.code === 'PGRST205'
     || /relation.+reports.+does not exist|could not find.+reports/i.test(error?.message || '');
+}
+
+function isMissingFunctionError(error) {
+  return error?.code === 'PGRST202' || error?.code === '42883'
+    || /function.+does not exist|could not find.+function.+schema cache/i.test(error?.message || '');
 }
 
 function escapeHtml(value) {
@@ -164,7 +170,16 @@ function renderContact() {
     contact.classList.add('text-xs', 'text-[#6B667E]');
     return;
   }
-  if (!listing.contact_info) return;
+  if (contactLoadError) {
+    contact.textContent = 'Kontaktinformasjonen kunne ikke hentes nå. Bruk meldingstjenesten eller prøv igjen senere.';
+    contact.classList.add('text-xs', 'text-[#6B667E]');
+    return;
+  }
+  if (!listing.contact_info) {
+    contact.textContent = 'Ingen ekstra kontaktinformasjon er oppgitt. Bruk meldingstjenesten.';
+    contact.classList.add('text-xs', 'text-[#6B667E]');
+    return;
+  }
   const raw = listing.contact_info.trim();
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
   const isPhone = !isEmail && /^[\d\s+()-]{6,}$/.test(raw);
@@ -209,8 +224,8 @@ async function init() {
   viewer = user;
   const publicColumnsWithoutVideo = 'id, user_id, title, description, price, city, area, move_in_date, images, image_url, roommates_info, lifestyle_tags, amenities, preferred_occupations, transit_minutes, grocery_nearby, gym_nearby, green_areas_nearby, property_type, room_size_m2, deposit_amount, furnished, rent_includes, status, is_featured, featured_until, created_at, updated_at';
   const publicColumns = `${publicColumnsWithoutVideo}, video_url`;
-  let { data, error } = await supabase.from('listings').select(viewer ? '*' : publicColumns).eq('id', id).single();
-  if (!viewer && error && isMissingColumnError(error)) {
+  let { data, error } = await supabase.from('listings').select(publicColumns).eq('id', id).single();
+  if (error && isMissingColumnError(error)) {
     ({ data, error } = await supabase.from('listings').select(publicColumnsWithoutVideo).eq('id', id).single());
     if (error && isMissingColumnError(error)) {
       const legacyColumns = 'id, user_id, title, description, price, city, area, move_in_date, image_url, roommates_info, is_featured, featured_until, created_at';
@@ -222,6 +237,20 @@ async function init() {
     return;
   }
   listing = data;
+  if (viewer) {
+    let { data: contactInfo, error: contactError } = await supabase.rpc('get_listing_contact', { p_listing_id: id });
+    if (contactError && isMissingFunctionError(contactError)) {
+      const legacyContact = await supabase.from('listings').select('contact_info').eq('id', id).single();
+      contactInfo = legacyContact.data?.contact_info ?? null;
+      contactError = legacyContact.error;
+    }
+    if (contactError) {
+      contactLoadError = true;
+      console.warn('Kontaktinformasjonen ble ikke hentet:', contactError.message);
+    } else {
+      listing.contact_info = typeof contactInfo === 'string' ? contactInfo : null;
+    }
+  }
   document.title = `${listing.title} – KollektivMatch`;
   document.getElementById('page-description').content = `${listing.title} i ${listing.city}, ${new Intl.NumberFormat('nb-NO').format(listing.price)} kr per måned. Kontakt annonsøren på KollektivMatch.`;
   document.getElementById('loading').classList.add('hidden');

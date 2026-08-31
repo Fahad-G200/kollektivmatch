@@ -1,4 +1,4 @@
-# Sikkerhetsrevisjon – 28. august 2026
+# Sikkerhetsrevisjon – oppdatert 31. august 2026
 
 Status: lokal kodegjennomgang og herding fullført. Ekstern migrering,
 Edge Function-deploy og stagingtester gjenstår hos administrator.
@@ -44,6 +44,8 @@ Stripe-refusjon og enkelte driftsdetaljer.
 | KM-2026-07 | Lav | Retur-/konfigurasjons- og betalings-URL-er | Rettet lokalt |
 | KM-2026-08 | Lav | Forsyningskjede og utdatert personverntekst | Rettet lokalt |
 | KM-2026-09 | Lav | Kontoenumerering og tabnabbing | Rettet lokalt |
+| KM-2026-10 | Middels | Masseuthenting av annonsekontakt | Rettet lokalt |
+| KM-2026-11 | Lanseringsblokkering | Eieridentitet, juridiske felt og domene | Krever eierbeslutning |
 
 ### KM-2026-01 – to betalbare løp for samme annonse
 
@@ -113,10 +115,36 @@ Stripe-refusjon og enkelte driftsdetaljer.
 - Registreringsfeil avslører ikke lenger direkte at en e-post finnes, og alle
   lenker som åpner ny fane bruker `noopener noreferrer`.
 
+### KM-2026-10 – innloggede kunne hente kontaktfelt i bulk
+
+- Scenario: `authenticated` hadde tabellnivå-SELECT på annonser. En innlogget
+  klient kunne derfor hente `contact_info` for mange aktive annonser direkte,
+  selv om brukergrensesnittet bare viste feltet på én annonseside.
+- Konsekvens: enklere masseinnsamling av frivillig oppgitt telefon/e-post.
+- Rettelse: tabellnivå-SELECT er fjernet. Kontaktfeltet hentes gjennom en
+  separat innloggingskrevende RPC for én aktiv annonse, med transaksjonell
+  per-brukergrense på 30 forskjellige annonser per time. Eierens komplette
+  annonse hentes gjennom egne eierbegrensede RPC-er. Tilgangsloggen er skjult
+  for Data API-klienter og oppføringer eldre enn sju dager ryddes ved nye kall.
+
+### KM-2026-11 – offentlig anonymitet kan ikke garanteres
+
+- Det publiserte nettleserbygget inneholder ikke Git-forfatternavn/-e-post,
+  lokale filstier, privat telefon, bankinformasjon eller serverhemmeligheter.
+- Nettstedet er fortsatt eierbeskyttet uten eksterne seere. Personvern og vilkår
+  har juridiske plassholdere og advarer selv mot publisering.
+- Dagens Sites-adresse inneholder arbeidsområdeetiketten `fah-08`. Bruk et
+  nøytralt egendefinert domene dersom etiketten kan kobles til eieren.
+- En lovlig kommersiell tjeneste og betalingsleverandørene kan kreve en
+  identifiserbar behandlingsansvarlig/virksomhet. Offentligheten kan skjermes fra
+  privat e-post, telefon og bostedsadresse ved å bruke reelle virksomhetsdata,
+  egen kontaktadresse og egnet forretningsadresse, men leverandører og registre
+  kan ikke gjøres anonyme.
+
 ## Testresultater
 
-- `npm test`: 23 av 23 Node-testoppføringer besto, 0 feilet. Testfilene
-  rapporterer samlet 395 funksjonelle og statiske kontroller, inkludert 50 nye
+- `npm test`: 28 av 28 Node-testoppføringer besto, 0 feilet. Testfilene
+  rapporterer samlet 400 funksjonelle og statiske kontroller, inkludert 50
   oppfølgingskontroller og 41 Stripe-kontroller.
 - Nettleser-JavaScript/MJS: `node --check` besto for alle filer.
 - Edge Functions: Node sin TypeScript-syntakskontroll besto for alle `.ts`-
@@ -133,6 +161,9 @@ Stripe-refusjon og enkelte driftsdetaljer.
 - Git-historikk: ingen private nøkler, provider-secrets eller service-role JWT
   ble funnet. Bare den tilsiktede offentlige Supabase publishable key finnes i
   klientkonfigurasjonen.
+- Identitetssjekk: Git-forfatternavn og Git-e-post finnes ikke i det publiserte
+  bygget. Synlig e-post i annonseskjemaet er bare eksempelteksten
+  `navn@epost.no`; ingen privat kontaktverdi ble funnet.
 
 ## Kontroller som ikke er bevist lokalt
 
@@ -168,13 +199,17 @@ Stripe-refusjon og enkelte driftsdetaljer.
 6. Juridisk navn, organisasjonsnummer, kontaktadresse, driftsleverandør,
    datalagringsregion og slettefrister er fortsatt plassholdere. Dette er en
    lanseringsblokkering som krever eier/juridisk vurdering.
+7. Kontaktoppslagsloggen rydder gamle rader ved nye oppslag. Før offentlig
+   lansering må en uavhengig tidsstyrt jobb sikre sletting også i perioder uten
+   trafikk.
 
 ## Prioritert administratorliste
 
 ### Før offentlig lansering
 
 1. Ta Supabase-backup. Kjør
-   `migrations/2026-08-28_payment_and_storage_followup.sql` i staging først og
+   `migrations/2026-08-28_payment_and_storage_followup.sql` og deretter
+   `migrations/2026-08-31_contact_privacy_hardening.sql` i staging først og
    deretter produksjon. Ikke kjør fresh-install-skjemaet.
 2. Deploy alle endrede Edge Functions og registrer `charge.refunded` i Stripe-
    webhooken. Bekreft eksakt produksjons-APP_BASE_URL og secrets uten å kopiere
@@ -186,6 +221,9 @@ Stripe-refusjon og enkelte driftsdetaljer.
    rate limits, egnet SMTP/SPF/DKIM/DMARC og MFA for administratorer.
 5. Fyll alle juridiske plassholdere og få vilkår, refusjon, angrerett,
    personvern og slettefrister kvalitetssikret.
+6. Bruk en separat administratorkonto med MFA, et nøytralt egendefinert domene,
+   virksomhets-e-post/telefon og verifisert Stripe/Vipps-visningsnavn. Ikke bruk
+   privat kontaktinformasjon i nettsted, kvitteringer eller kontoutskriftstekst.
 
 ### Første uke
 
