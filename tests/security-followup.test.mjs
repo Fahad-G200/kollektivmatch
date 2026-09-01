@@ -77,6 +77,7 @@ assert.match(auth, /target\.username \|\| target\.password/);
 assert.doesNotMatch(auth, /Denne e-postadressen er allerede registrert/);
 assert.match(dashboard, /redirect\.hostname !== 'checkout\.stripe\.com'/);
 assert.match(cors, /url\.pathname !== '\/'/);
+assert.match(cors, /LOCAL_ORIGINS\.has\(appOrigin\)[\s\S]{0,100}ALLOW_LOCAL_ORIGINS/);
 assert.match(vippsLogin, /appUrl!\.pathname !== '\/'/);
 assert.match(vippsLogin, /supabaseProjectUrl!\.hostname\.endsWith\('\.supabase\.co'\)/);
 assert.match(vippsCallback, /getVippsLoginConfig\(\)\.appBase/);

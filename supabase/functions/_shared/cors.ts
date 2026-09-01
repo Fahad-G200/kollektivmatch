@@ -28,8 +28,12 @@ function configuredOrigin() {
 
 function localOriginsEnabled() {
   const appOrigin = configuredOrigin();
-  return (appOrigin !== null && LOCAL_ORIGINS.has(appOrigin))
-    || Deno.env.get('ALLOW_LOCAL_ORIGINS') === 'true';
+  // Et glemt miljoeflagg skal aldri kunne slippe localhost inn sammen med en
+  // publisert APP_BASE_URL. Lokal CORS krever bade eksplisitt flagg og at
+  // selve app-origin er en kjent lokal utviklingsadresse.
+  return appOrigin !== null
+    && LOCAL_ORIGINS.has(appOrigin)
+    && Deno.env.get('ALLOW_LOCAL_ORIGINS') === 'true';
 }
 
 export function isAllowedOrigin(request: Request) {

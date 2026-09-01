@@ -14,6 +14,7 @@
 --   migrations/2026-08-28_media_and_input_hardening.sql
 --   migrations/2026-08-28_payment_and_storage_followup.sql
 --   migrations/2026-08-31_contact_privacy_hardening.sql
+--   migrations/2026-09-01_reporting_hardening.sql
 --
 -- En full førstegangsinstallasjon som SLETTER ALLE DATA ligger bevisst i:
 --   schema_fresh_install_DELETES_ALL_DATA.sql

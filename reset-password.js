@@ -42,7 +42,12 @@ async function establishRecoverySession() {
       refresh_token: fragment.get('refresh_token'),
     });
   } else {
-    result = await supabase.auth.getSession();
+    // En vanlig aktiv innloggingsokt er ikke bevis pa at denne siden ble apnet
+    // fra en recovery-lenke. Passordbyttet krever derfor en kode, token_hash
+    // eller eksplisitte recovery-tokens i selve innkommende lenken.
+    clearSensitiveUrl();
+    showInvalid();
+    return;
   }
 
   clearSensitiveUrl();

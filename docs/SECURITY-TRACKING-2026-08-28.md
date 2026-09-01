@@ -1,245 +1,336 @@
-# Sikkerhetsrevisjon – oppdatert 31. august 2026
+# Sikkerhets-, funksjons- og UX-revisjon – 1. september 2026
 
-Status: lokal kodegjennomgang og herding fullført. Ekstern migrering,
-Edge Function-deploy og stagingtester gjenstår hos administrator.
+Status: kodegjennomgang, lokal herding, regresjonstester og produksjonsbygg er
+fullført. Ny databasemigrering og endrede Supabase Edge Functions er **ikke**
+installert i produksjon av denne revisjonen. Disse punktene er derfor ikke
+produksjonsbevist før administrator har fulgt sjekklisten nederst.
 
-Ingen nettjeneste kan garanteres 100 prosent sikker. Endringene under fjerner
-bekreftede svakheter og reduserer risiko, men erstatter ikke driftsovervåking,
-oppdateringer, backup, tilgangsrevisjoner eller hendelseshåndtering.
+Ingen nettjeneste kan garanteres 100 prosent sikker eller «umulig å hacke».
+Arbeidet under fjerner bekreftede svakheter og reduserer risiko, men erstatter
+ikke oppdateringer, overvåking, backup, tilgangsrevisjon og hendelseshåndtering.
 
-## Omfang og arkitektur
+## 1. Kort konklusjon
 
-- Nettleserklient med lokalt bygget JavaScript og Tailwind
-- Supabase Auth med PKCE, PostgreSQL, RLS, Storage og Realtime
-- Supabase Edge Functions for Vipps Login, Vipps ePayment og Stripe Checkout
-- Signerte Stripe- og Vipps-webhooks
-- Vinext, Cloudflare Workers/Wrangler og OpenAI Sites
-- NPM-avhengigheter, produksjonsbygg, publiseringsarkiv og Git-historikk
+KollektivMatch har et gjennomgående godt sikkerhetsmønster: en lokalbundet
+frontend, PKCE, streng CSP, serverstyrte betalingsbeløp, signerte webhooks,
+kolonnebegrensede grants og `SECURITY DEFINER`-RPC-er med fast `search_path`.
+Denne revisjonen bekreftet de tidligere betalings- og kontaktrettelsene og la
+til herding for rapportering, moderatorhistorikk, recovery/callback,
+produksjons-CORS, Edge-avhengigheter og Smart Match.
 
-Dataflyten er nettleser → Supabase Auth/RLS eller autentisert Edge Function →
-Stripe/Vipps. Nettleseren sender bare produkt- og annonse-ID. Pris, valuta,
-varighet, eierskap og leveranse bestemmes på serveren. Kortnummer, CVC,
-bankpassord og betalingsnøkler skal aldri gå gjennom nettleserkoden.
+Alle 32 Node-testoppføringer består, TypeScript-kontrollen består,
+produksjonsbygget består og npm audit rapporterer 0 kjente sårbarheter. Den
+genererte klienten inneholder ingen `.env`, SQL, tester, ZIP-filer, source maps
+eller kjente serverhemmelighetsmønstre. Workers-konfigurasjonen har ingen
+D1-, R2-, KV-, service- eller secret-bindinger.
 
-## Baseline og sammenligning
+Sammenlignet med revisjonen 28.–31. august er kryssleverandørbetaling,
+Stripe-refusjon, Storage-eierskap og skjerming av `contact_info` fortsatt
+intakt. Nytt siden sist er særlig:
 
-Baseline var `docs/AUDIT-2026-08-23.md`,
-`docs/VIPPS-TESTPLAN-2026-08-23.md` og committene `265a88a`/`31aa760`.
-Den tidligere revisjonen hadde allerede etablert PKCE, streng CSP, HSTS,
-serverpris, signerte webhooks, RLS/RPC-herding, lokale frontendavhengigheter,
-størrelsesgrenser og media-allowlist. Denne oppfølgingen fant nye problemer i
-kombinasjonen Stripe/Vipps, nyere Supabase Storage-eierskap, parallelle kall,
-Stripe-refusjon og enkelte driftsdetaljer.
+- rapporter går via server-RPC med allowlist, rate limit og lås;
+- moderatorhandlinger får eget, app-utilgjengelig revisjonsspor;
+- klienten feiler lukket hvis rapport-/kontakt-RPC mangler;
+- en vanlig eksisterende sesjon godtas ikke som callback- eller recoverybevis;
+- localhost-CORS krever både lokal `APP_BASE_URL` og eksplisitt flagg;
+- Edge-importer bruker eksakt låst `npm:`-pakke i stedet for runtime-CDN;
+- Smart Match krasjer ikke når en annonse mangler koordinater, og 500-grensen
+  opplyses tydelig i grensesnittet.
 
-## Bekreftede funn
+Nettsiden er **ikke klar for offentlig lansering** ennå. Juridiske plassholdere
+står igjen, Stripe rapporterer testmiljø, Vipps er av, Supabase-endringene må
+installeres/testes, og markedsplassen har ingen aktive annonser.
+
+### Arkitektur og verifisert dataflyt
+
+Nettleser → Supabase Auth/RLS/Storage/Realtime eller autentisert Edge Function
+→ Stripe/Vipps. Nettleseren sender produkt- og annonse-ID. Pris, valuta,
+varighet, eierskap, betalingsstatus og leveranse bestemmes på serveren.
+Kortnummer, CVC og bankpassord går ikke gjennom KollektivMatch-koden.
+
+## 2. Bekreftede funn
 
 | ID | Grad | Komponent | Status |
 |---|---|---|---|
-| KM-2026-01 | Høy | Stripe/Vipps ordreoppretting | Rettet lokalt |
-| KM-2026-02 | Høy | Stripe-refusjon og refund-webhook | Rettet lokalt |
-| KM-2026-03 | Middels | Leverandørisolasjon i Vipps webhook/refusjon | Rettet lokalt |
-| KM-2026-04 | Middels | Supabase Storage-eierskap og objektstier | Rettet lokalt |
-| KM-2026-05 | Middels | Parallelle meldings- og opplastingsgrenser | Rettet lokalt |
-| KM-2026-06 | Lav | Cache på private sider | Rettet lokalt |
-| KM-2026-07 | Lav | Retur-/konfigurasjons- og betalings-URL-er | Rettet lokalt |
-| KM-2026-08 | Lav | Forsyningskjede og utdatert personverntekst | Rettet lokalt |
-| KM-2026-09 | Lav | Kontoenumerering og tabnabbing | Rettet lokalt |
-| KM-2026-10 | Middels | Masseuthenting av annonsekontakt | Rettet lokalt |
-| KM-2026-11 | Lanseringsblokkering | Eieridentitet, juridiske felt og domene | Krever eierbeslutning |
+| KM-2026-01 | Høy | Stripe/Vipps ordreoppretting | Rettet lokalt tidligere, bekreftet på nytt |
+| KM-2026-02 | Høy | Stripe-refusjon og webhook | Rettet lokalt tidligere, bekreftet på nytt |
+| KM-2026-03 | Middels | Leverandørisolasjon | Rettet lokalt tidligere, bekreftet på nytt |
+| KM-2026-04 | Middels | Storage-eierskap og stier | Rettet lokalt tidligere, rest-risiko åpen |
+| KM-2026-05 | Middels | Parallelle meldings-/opplastingsgrenser | Rettet lokalt tidligere |
+| KM-2026-06 | Lav | Cache/headere på private sider | Rettet lokalt; app-headere må fjernverifiseres |
+| KM-2026-07 | Lav | Retur-, callback- og betalings-URL-er | Rettet lokalt |
+| KM-2026-08 | Lav | Forsyningskjede | Ytterligere rettet lokalt |
+| KM-2026-09 | Lav | Kontoenumerering/tabnabbing | Rettet lokalt tidligere |
+| KM-2026-10 | Middels | Masseuthenting av annonsekontakt | Rettet lokalt tidligere, bekreftet mot API |
+| KM-2026-11 | Blokkering | Juridisk eieridentitet/domene | Åpen eierbeslutning |
+| KM-2026-12 | Middels | Fail-open klientfallback | Rettet lokalt |
+| KM-2026-13 | Middels | Rapportmisbruk/moderatoraudit | Rettet lokalt; migrering gjenstår |
+| KM-2026-14 | Lav | Auth callback/recovery-status | Rettet lokalt |
+| KM-2026-15 | Lav | Anonym `messages`-grant | Rettet i ny migrering |
+| KM-2026-16 | Middels | Localhost tillatt av prod-CORS | Rettet lokalt; Edge-deploy gjenstår |
+| KM-2026-17 | Lav | Edge runtime-CDN | Rettet lokalt |
+| KM-2026-18 | Middels funksjonell | Smart Match uten koordinater | Rettet lokalt |
 
-### KM-2026-01 – to betalbare løp for samme annonse
+### KM-2026-01 til KM-2026-03 – betaling
 
-- Scenario: En bruker kunne starte Stripe og Vipps samtidig eller etter
-  hverandre. Den gamle Vipps-signaturen kunne gjenbruke feil ordre, mens
-  Stripe-varianten bare dedupliserte innen samme leverandør.
-- Konsekvens: risiko for dobbelt belastning, leverandørforveksling eller dobbel
-  fremhevingsleveranse.
-- Rotårsak: åpen-ordre-kontrollen var ikke global per annonse.
-- Rettelse: ny fem-arguments RPC låser annonseraden og tillater bare én
-  `pending`/`authorized` ordre per annonse på tvers av leverandører. Legacy-RPC
-  går gjennom samme kode med eksplisitt `vipps`. Statusendring og sletting
-  blokkeres mens ordren er betalbar.
-- Verifikasjon: nye statiske regresjonskontroller bekrefter lås, provider-felt,
-  minst privilegium og begge kallestedene. Transaksjonell stagingtest gjenstår.
+- **Scenario og konsekvens:** To samtidige betalingsveier kunne tidligere lage
+  konkurrerende ordrer for samme annonse; eldre leverandørkode kunne blande
+  leverandører; Stripe-refusjon manglet komplett leverandørnøytral flyt. Det
+  kunne gitt dobbelt betaling/leveranse eller uoverensstemmelse etter refusjon.
+- **Rotårsak:** deduplisering og enkelte oppslag var leverandørspesifikke.
+- **Rettelse:** annonseraden låses, bare én `pending`/`authorized` ordre tillates
+  per annonse på tvers av leverandører, leverandør bindes eksplisitt, status og
+  sletting låses under åpen betaling, og levering/refusjon/hendelser er
+  idempotente.
+- **Verifikasjon:** Stripe- og Vipps-signaturkode bruker rå body, HMAC,
+  tidsvindu og konstant-tid-sammenligning. Pris/valuta/produkt hentes på
+  serveren. 41 Stripe-kontroller, 25 felles betalingskontroller, 12
+  betalingsregeltester og 4 Vipps-signaturtester består. Ingen ekte betaling
+  ble gjennomført.
 
-### KM-2026-02 – manglende sikker Stripe-refusjon
+### KM-2026-04 og KM-2026-05 – Storage og samtidighet
 
-- Scenario: Adminfunksjonen antok Vipps. En Stripe-refusjon gjort i Dashboard
-  ville ikke nødvendigvis markere ordren refundert eller trekke tilbake ubrukt
-  fremheving.
-- Konsekvens: feil mellom betaling, regnskap og levert produkt.
-- Rotårsak: refusjonsflyten og webhook-listen var ikke leverandørnøytral.
-- Rettelse: Stripe-refusjon bruker PaymentIntent, serverlagret beløp og valuta,
-  separat idempotency key og full identitetskontroll. `charge.refunded` håndteres
-  på signert rå webhook-body; bare full refund anvendes. PaymentIntent lagres
-  før levering og har unik indeks.
-- Verifikasjon: regresjonstester dekker refund-endepunkt, idempotens,
-  PaymentIntent-binding, webhook-oppslag, beløp og `apply_boost_refund`.
+- **Scenario og konsekvens:** eldre `owner`-policyer, bredere stier og
+  tell-før-skriv kunne gi svakere eierskap og la samtidige forespørsler
+  overskride kvoter/spamgrenser.
+- **Rettelse:** `owner_id`, eksakt origin/bucket/eier, ett UUID-filsegment,
+  immutable annonsemedia, eksakt avatarsti og transaksjonelle advisory-låser.
+- **Verifikasjon:** Storage-sti-, quota-, MIME-, filendelse-, pixel-, størrelse-
+  og samtidighetstester består. Direkte Storage API kan fortsatt omgå
+  klientens video-varighet/kodek-kontroll; se gjenværende risiko.
 
-### KM-2026-03 – leverandørforveksling
+### KM-2026-06 til KM-2026-10 – nettleser, auth og kontakt
 
-- Scenario: En Stripe-ordre kunne sendes til gammel Vipps-refusjonskode, og
-  Vipps-webhooken søkte bare på referanse.
-- Konsekvens: feil leverandørkall og uklar ordretilstand.
-- Rettelse: alle Vipps-avstemminger, webhooks og refusjoner krever eksplisitt
-  `payment_provider = 'vipps'`; ukjent leverandør avvises.
+- Private sider har `no-store`, `noindex`, `no-referrer`; callbackparametere
+  fjernes fra URL. `returnTo` tillater bare samme origin uten credentials.
+- Sesjonen ligger i `sessionStorage`; bare kortlivet PKCE code-verifier deles i
+  `localStorage` for e-postcallback i ny fane. Dette reduserer persistens, men
+  beskytter ikke mot XSS i samme origin. HttpOnly-cookie krever et BFF.
+- Offentlig profilgrant er begrenset til visningsfelter. Produksjonsprobe ga
+  200 for offentlige profil-/annonsefelt og 401 for `income_status` og
+  `contact_info`. Kontakt hentes én annonse om gangen via innloggingskrevende
+  RPC med 30 forskjellige annonser/time.
+- CSP har ingen `unsafe-inline`/`unsafe-eval`; media-URL-er må matche eksakt
+  Supabase-origin/bucket uten query/hash/path traversal. Brukertekst escapes
+  eller settes med `textContent`.
 
-### KM-2026-04 – Storage-eierskap, stier og overskriving
+### KM-2026-11 – offentlig anonymitet og juridisk identitet
 
-- Scenario: eldre policyer brukte det utfasete `owner`-feltet og godtok bredere
-  mapper/URL-er. Listing-media kunne overskrives på samme sti.
-- Konsekvens: svakere eierskapskontroll, tvetydige kodede stier og større
-  misbruksflate.
-- Rettelse: `owner_id`, eksakt bucket/eier/origin, ett filsegment,
-  UUID-filnavn og tillatte endelser. Annonsemedia er immutable; avatar kan bare
-  være `<user>/avatar.webp`. Listing og sletting krever faktisk Storage-eier.
+- Det bygde nettstedet inneholder ikke Git-forfatternavn/-e-post, lokale
+  filstier, privat telefon, bankinformasjon eller serverhemmeligheter.
+- Vilkår og personvern inneholder fortsatt `[JURIDISK NAVN]`, `[ORG.NR.]` og
+  kontaktplassholdere. Dette blokkerer offentlig lansering.
+- Sites-adressen inneholder arbeidsområdeetiketten `fah-08`. Bruk et nøytralt
+  egendefinert domene dersom den kan kobles til eieren.
+- En lovlig kommersiell tjeneste kan ikke love anonymitet overfor Stripe,
+  Vipps, bank, hosting, myndigheter eller virksomhetsregistre. Bruk separat
+  virksomhets-e-post/telefon og egnet forretningsadresse i offentlig kontakt.
 
-### KM-2026-05 – parallelle kall kunne omgå tellinger
+### KM-2026-12 og KM-2026-13 – rapportering feilet åpent
 
-- Scenario: samtidige meldinger eller opplastinger kunne lese samme tellestand
-  før noen av transaksjonene skrev.
-- Konsekvens: overskridelse av spam- og lagringsgrenser.
-- Rettelse: transaksjonelle advisory-låser serialiserer samme avsender eller
-  samme bruker/bucket før telling og skriving. Andre brukere blokkeres ikke.
+- **Scenario:** hvis den nye RPC-en manglet, falt klienten tilbake til direkte
+  lesing av `contact_info` eller direkte INSERT i `reports`. Rapportøren kom fra
+  klienten, og rapportering manglet en global timegrense og moderatorhistorikk.
+- **Konsekvens:** en feil migreringsrekkefølge kunne gjenåpne eldre
+  kontaktprivilegier eller gi rapportspam og dårlig etterprøvbar moderering.
+- **Rotårsak:** kompatibilitet ble prioritert over fail-closed oppførsel.
+- **Rettelse:** begge fallbackene er fjernet. Ny `submit_report()` bruker
+  `auth.uid()`, allowlist, maksimum 1000 tegn, aktiv annen-eiers annonse,
+  10/time og per-bruker advisory-lås. Direkte INSERT tilbakekalles. Moderator-
+  handlinger lagres i separat tabell som app-rollene ikke kan lese/skrive.
+- **Verifikasjon:** 26 rapporteringskontroller og effektiv-grant-matrisen
+  består. Runtimeverifikasjon krever at migreringen installeres i staging.
 
-### KM-2026-06 til KM-2026-09 – nettleser og drift
+### KM-2026-14 – eksisterende sesjon ble tolket som callback/recoverybevis
 
-- `dashboard.html` og `create-listing.html` har nå `no-store` i både statisk og
-  serverstyrt headerkonfigurasjon.
-- `returnTo` har lengde-, scheme-, origin- og credential-kontroll.
-- APP_BASE_URL/Supabase-callback må være en ren rot-origin uten credentials,
-  query eller fragment. Stripe/Vipps-kall har eksplisitte timeouts.
-- Nettleseren tillater bare HTTPS-redirect til `checkout.stripe.com`.
-- Sites-pluginen er eksakt låst til `0.2.0`; personvernteksten beskriver nå
-  lokal bundling i stedet for gamle CDN-importer.
-- Registreringsfeil avslører ikke lenger direkte at en e-post finnes, og alle
-  lenker som åpner ny fane bruker `noopener noreferrer`.
+- **Scenario:** direkte besøk til callback- eller reset-siden kunne bruke en
+  allerede eksisterende sesjon og vise suksess/passordskjema uten en innkommende
+  auth-/recoverylenke.
+- **Konsekvens:** misvisende sikkerhetstilstand og svakere bekreftelse av at
+  brukeren faktisk kom fra riktig flyt.
+- **Rettelse:** sidene krever code, `token_hash` eller eksplisitte tokens fra
+  den innkommende flyten og feiler ellers lukket. Etter passordbytte logges
+  sesjonen ut.
+- **Verifikasjon:** 12 recovery-regresjonskontroller består.
 
-### KM-2026-10 – innloggede kunne hente kontaktfelt i bulk
+### KM-2026-15 – anonym tabellrettighet på meldinger
 
-- Scenario: `authenticated` hadde tabellnivå-SELECT på annonser. En innlogget
-  klient kunne derfor hente `contact_info` for mange aktive annonser direkte,
-  selv om brukergrensesnittet bare viste feltet på én annonseside.
-- Konsekvens: enklere masseinnsamling av frivillig oppgitt telefon/e-post.
-- Rettelse: tabellnivå-SELECT er fjernet. Kontaktfeltet hentes gjennom en
-  separat innloggingskrevende RPC for én aktiv annonse, med transaksjonell
-  per-brukergrense på 30 forskjellige annonser per time. Eierens komplette
-  annonse hentes gjennom egne eierbegrensede RPC-er. Tilgangsloggen er skjult
-  for Data API-klienter og oppføringer eldre enn sju dager ryddes ved nye kall.
+- **Scenario:** produksjons-Data API svarte 200 på anonym `messages`-SELECT.
+  RLS skjulte radene i proben, men tabellrettigheten var unødvendig.
+- **Konsekvens:** ekstra angrepsflate og større skade ved en fremtidig
+  feilkonfigurert policy.
+- **Rettelse:** ny migrering tilbakekaller SELECT fra `public` og `anon`.
+- **Verifikasjon:** statisk effektiv-tilgangstest består; produksjon fortsetter
+  å svare 200 til migreringen faktisk er kjørt.
 
-### KM-2026-11 – offentlig anonymitet kan ikke garanteres
+### KM-2026-16 – localhost var tillatt i produksjons-CORS
 
-- Det publiserte nettleserbygget inneholder ikke Git-forfatternavn/-e-post,
-  lokale filstier, privat telefon, bankinformasjon eller serverhemmeligheter.
-- Nettstedet er fortsatt eierbeskyttet uten eksterne seere. Personvern og vilkår
-  har juridiske plassholdere og advarer selv mot publisering.
-- Dagens Sites-adresse inneholder arbeidsområdeetiketten `fah-08`. Bruk et
-  nøytralt egendefinert domene dersom etiketten kan kobles til eieren.
-- En lovlig kommersiell tjeneste og betalingsleverandørene kan kreve en
-  identifiserbar behandlingsansvarlig/virksomhet. Offentligheten kan skjermes fra
-  privat e-post, telefon og bostedsadresse ved å bruke reelle virksomhetsdata,
-  egen kontaktadresse og egnet forretningsadresse, men leverandører og registre
-  kan ikke gjøres anonyme.
+- **Scenario:** statusfunksjonen svarte 200 for produksjonsorigin, 403 for
+  `evil.example`, men også 200 for `http://localhost:5500`.
+- **Konsekvens:** en lokal tjeneste i brukerens nettleser kunne kalle åpne Edge-
+  endepunkter under en glemt produksjonskonfigurasjon. Autentiserte funksjoner
+  krever fortsatt bearer-token, men origin-flaten var bredere enn tilsiktet.
+- **Rettelse:** localhost krever både eksplisitt `ALLOW_LOCAL_ORIGINS=true` og
+  at `APP_BASE_URL` selv er en kjent localhost-origin.
+- **Verifikasjon:** CORS-regresjonstest består. Produksjon er ikke rettet før
+  alle funksjoner som importerer `_shared/cors.ts` er deployet på nytt.
 
-## Testresultater
+### KM-2026-17 – mutable runtime-CDN i Edge Functions
 
-- `npm test`: 28 av 28 Node-testoppføringer besto, 0 feilet. Testfilene
-  rapporterer samlet 400 funksjonelle og statiske kontroller, inkludert 50
-  oppfølgingskontroller og 41 Stripe-kontroller.
-- Nettleser-JavaScript/MJS: `node --check` besto for alle filer.
-- Edge Functions: Node sin TypeScript-syntakskontroll besto for alle `.ts`-
-  filer. Full Deno-typekontroll kunne ikke kjøres fordi Deno/Supabase CLI ikke
-  er installert i miljøet.
+- **Scenario:** Edge-funksjoner importerte Supabase-klienten fra `esm.sh` ved
+  runtime. Versjonen var låst, men en ekstra CDN var del av forsyningskjeden.
+- **Konsekvens:** ekstra tilgjengelighets- og leverandørrisiko.
+- **Rettelse:** eksakt `npm:@supabase/supabase-js@2.111.0` brukes. Dette følger
+  Supabase sin anbefalte Deno/npm-modell. Se
+  https://supabase.com/docs/guides/functions/dependencies og
+  https://supabase.com/docs/guides/security/npm-security.
+- **Verifikasjon:** statiske tester av alle tre importsteder og TypeScript-
+  syntaks består. Full Deno-typekontroll krever Deno/Supabase CLI.
+
+### KM-2026-18 – Smart Match krasjet ved manglende koordinater
+
+- **Scenario:** valgt skole sammen med en eldre annonse uten koordinater kunne
+  gjøre `null` om til 0 km og deretter kalle `toLocaleString` på `null`.
+- **Konsekvens:** hele resultatvisningen kunne stoppe for et legitimt datasett.
+- **Rettelse:** manglende/blank avstand gir `null` og nærhetskriteriet utelates.
+  UI opplyser også at bare de 500 nyeste ordinære treffene rangeres hvis
+  resultatsettet er større.
+- **Verifikasjon:** 29 Smart Match-tester dekker 0–100, grenseverdier,
+  budsjettavvik, manglende koordinater, sortering, deduplisering og 500-grensen.
+
+## 3. Endringer
+
+- `migrations/2026-09-01_reporting_hardening.sql`: rapport-RPC, rate limit,
+  moderatoraudit, minste privilegium for meldinger/rapporter.
+- `listing-detail.js`: serverstyrt rapportering og fail-closed kontakt/rapport.
+- `auth-callback.js`, `reset-password.js`: eksplisitt callback-/recoverybevis.
+- `match.js`, `feed.js`: manglende koordinater og ærlig 500-grense.
+- `supabase/functions/_shared/cors.ts`: streng produksjons-CORS.
+- Edge Supabase-importer: eksakt `npm:`-import uten runtime-CDN.
+- `README.md`, `schema.sql`: migreringsrekkefølge og driftsdokumentasjon.
+- Nye tester: effektiv tilgang, rapportering, recovery og full brukerflyt/HTML.
+
+Funksjonell konsekvens: rapportering og direkte kontaktinfo feiler kontrollert
+hvis påkrevde RPC-er ikke er installert. Dette er tilsiktet; eldre, bredere
+direkte tabelltilgang blir ikke brukt som reserve.
+
+## 4. Testresultater
+
+- `npm test`: 32 besto, 0 feilet, 0 hoppet over.
+- JavaScript/MJS: `node --check` besto for alle kilde- og testfiler.
+- Edge/konfigurasjon TypeScript: syntakskontroll besto for alle `.ts`-filer.
 - Frontend/Workers: `tsc --noEmit --incremental false` besto.
-- `npm run build`: Vinext-produksjonsbygg besto.
-- `npm audit --audit-level=low --include=dev`: 0 kjente sårbarheter i hele den
-  låste transitive grafen.
-- Produksjonsartefakt: ingen source maps, `.env`, SQL, tester, arkiver eller
-  kjente serverhemmelighetsmønstre. Wrangler-artefakten har ingen D1/R2/KV-
-  bindings eller runtime-secrets.
+- `npm run build`: Vinext/Vite-produksjonsbygg besto.
+- `npm audit --audit-level=low --include=dev`: 0 kjente sårbarheter.
+- `npm ls --all --omit=optional --depth=4`: grafen kunne løses. Vinext og flere
+  byggkomponenter er fortsatt beta/pre-1.0 og må følges månedlig.
+- Artefaktsjekk: 0 `.env`, SQL, tester, ZIP, source maps eller kjente
+  serverhemmelighetsmønstre i klient-/serverbygget.
+- Wrangler: tomme `vars`, secrets, D1, R2, KV og service-bindings;
+  observability er aktivert.
 - `git diff --check`: besto.
 - Git-historikk: ingen private nøkler, provider-secrets eller service-role JWT
-  ble funnet. Bare den tilsiktede offentlige Supabase publishable key finnes i
-  klientkonfigurasjonen.
-- Identitetssjekk: Git-forfatternavn og Git-e-post finnes ikke i det publiserte
-  bygget. Synlig e-post i annonseskjemaet er bare eksempelteksten
-  `navn@epost.no`; ingen privat kontaktverdi ble funnet.
+  funnet. Den tilsiktede offentlige Supabase publishable key finnes i klienten.
 
-## Kontroller som ikke er bevist lokalt
+### Faktiske, ikke-destruktive produksjonsprober
 
-- Migreringen er ikke kjørt mot Supabase, og oppdaterte Edge Functions er ikke
-  deployet. RLS/Storage og parallelle transaksjoner må derfor testes i staging
-  med to testbrukere før offentlig lansering.
-- Ingen ekte eller test-providerbetaling/refusjon ble utført i denne revisjonen.
-- Deno-typekontroll, Supabase Security Advisor, faktisk Auth-konfigurasjon,
-  SMTP, CAPTCHA, MFA, lekkede-passord-kontroll og rate limits krever dashboard-
-  eller CLI-tilgang.
-- Produksjonsheaderne må kontrolleres på den publiserte URL-en etter deploy.
+- Den private Sites-adressen svarte 401 uten eierøkt og `no-store` ved
+  tilgangsporten. Dette beviser privat adgang, ikke appens egne CSP-headere.
+- Med eierøkt rendret forsiden uten konsollstopp, med 0 annonser og en tydelig
+  tomtilstand.
+- Supabase Data API: offentlige profil-/annonsefelt 200; private profilfelt,
+  `contact_info`, `reports` og `boost_orders` 401. Anonym `messages` ga 200 med
+  RLS-skjulte rader og er derfor lagt inn som funn.
+- Stripe-status: klar i **testmiljø**. Vipps Login/betaling: av. Ingen ekte eller
+  test-providerbetaling/refusjon ble utført.
+- CORS: produksjonsorigin 200, ukjent ekstern origin 403, localhost 200 før
+  Edge-redeploy.
 
-## Gjenværende risiko
+### Ikke bevist i dette miljøet
 
-1. Bilder og video valideres med bucket-MIME/endelse/størrelse og klientkontroll,
-   men det finnes ikke en server-side medieproxy som dekoder filsignatur,
-   dimensjoner, kodek, varighet og metadata. Før stor offentlig trafikk bør
-   opplasting gå gjennom isolert scanning/transkoding med CPU-/minne-/tidsgrenser.
-2. Sesjonen lagres i `sessionStorage`, mens bare kortlivet PKCE code-verifier
-   deles via `localStorage` for e-postcallback i ny fane. Dette begrenser
-   persistens, men enhver XSS i samme origin kan fortsatt lese aktiv sesjon. En
-   HttpOnly-cookie krever et reelt BFF/serverarkitekturbytte; streng CSP, lokal
-   bundling og escaping er derfor dagens primære vern.
-3. Eiere av en aktiv annonse kan lese opptil 100 frivillig synlige
-   boligsøkerprofiler. Det er tilsiktet, men krever overvåking mot scraping og en
-   tydelig misbruks-/blokkeringsrutine.
-4. Vinext er beta og flere byggkomponenter er pre-1.0. Versjonene er eksakt
-   låst og audit er ren, men kjeden må oppdateres kontrollert og bygges på nytt
-   minst månedlig.
-5. Workers-observability er aktiv i bygget. Sett kort oppbevaring, tilgang på
-   minste privilegium og varsling uten å logge auth-koder, tokens, meldinger
-   eller komplette persondata.
-6. Juridisk navn, organisasjonsnummer, kontaktadresse, driftsleverandør,
-   datalagringsregion og slettefrister er fortsatt plassholdere. Dette er en
-   lanseringsblokkering som krever eier/juridisk vurdering.
-7. Kontaktoppslagsloggen rydder gamle rader ved nye oppslag. Før offentlig
-   lansering må en uavhengig tidsstyrt jobb sikre sletting også i perioder uten
-   trafikk.
+- Faktisk migreringshistorikk, policyer, Auth-innstillinger og Storage-regler i
+  Supabase Dashboard. Ingen `psql`, Deno, Docker eller Supabase CLI var
+  tilgjengelig lokalt.
+- Tverrbruker-IDOR med to stagingkontoer, Storage-race, Realtime-lekkasje og
+  parallelle databasekall mot en ekte stagingdatabase.
+- Stripe/Vipps sandboxbetaling, dobbel webhook og refusjon end-to-end.
+- Faktiske app-headere bak Sites etter publisering; eierportens 401 skjuler
+  applikasjonsresponsen for ekstern curl.
+- Supabase Security Advisor, CAPTCHA, SMTP, lekkede-passord-kontroll, MFA,
+  rate-limit-konfigurasjon og leverandørdashboard.
 
-## Prioritert administratorliste
+## 5. Gjenværende risiko
 
-### Før offentlig lansering
+1. **Medieprosessering:** normal bildeklient dekoder og re-enkoder WebP og
+   fjerner metadata, men direkte Storage API kan omgå klientens varighet,
+   kodek, filsignatur, dimensjoner og metadata. Før stor trafikk bør opplasting
+   gå gjennom isolert scanning/transkoding med CPU-/minne-/tidsgrenser.
+2. **Offentlig media:** bucketene er bevisst offentlige. En kjent URL kan leses
+   frem til objektet slettes. Opplast-og-forlat kan etterlate foreldreløse
+   objekter; innfør en planlagt oppryddingsjobb via Storage API.
+3. **Kontosletting:** klienten sletter media før auth-bruker. Hvis databasekallet
+   feiler etter medieopprydding, kan kontoen stå igjen uten media. En fullt
+   konsistent løsning krever en betrodd serverstyrt slettingsjobb med status og
+   retries.
+4. **Sesjon/XSS:** `sessionStorage` begrenser persistens, men enhver XSS i samme
+   origin kan lese aktiv sesjon. HttpOnly-cookie krever BFF/serverarkitektur.
+5. **Boligsøkerskraping:** eier av aktiv annonse kan lese maksimalt 100 synlige
+   profiler. Det strukturelle taket er godt, men samme RPC bør få rate limit og
+   misbruksovervåking.
+6. **Smart Match:** de 500 nyeste ordinære treffene rangeres klient-side. UI er
+   nå ærlig om grensen; global rangering krever server-side søk/rangering.
+7. **Forsyningskjede:** `vinext@1.0.0-beta.8`, Sites-plugin og enkelte
+   byggkomponenter er pre-1.0. Eksakte lockfile-versjoner og ren audit reduserer,
+   men fjerner ikke, risikoen. Bruk `npm ci` i CI.
+8. **Observability:** Workers-observability er aktivert. Sett kort oppbevaring,
+   minste privilegium og filtrering som aldri logger auth-koder, tokens,
+   meldinger eller komplett persondata.
+9. **Juridisk/organisatorisk:** eieridentitet, organisasjonsnummer,
+   kontaktadresse, lagringsregion, behandlingsgrunnlag, slettefrister, refusjon
+   og angrerett krever menneskelig/juridisk kvalitetssikring.
+10. **Markedsplass/UX:** 0 annonser er den største konverteringsrisikoen. Før
+    offentlig åpning bør et lite, verifisert startutvalg skaffes uten falske
+    annonser. Hero, filtre, sikkerhetsforklaringer og tomtilstand er ellers
+    tydelige og attraktive.
 
-1. Ta Supabase-backup. Kjør
-   `migrations/2026-08-28_payment_and_storage_followup.sql` og deretter
-   `migrations/2026-08-31_contact_privacy_hardening.sql` i staging først og
-   deretter produksjon. Ikke kjør fresh-install-skjemaet.
-2. Deploy alle endrede Edge Functions og registrer `charge.refunded` i Stripe-
-   webhooken. Bekreft eksakt produksjons-APP_BASE_URL og secrets uten å kopiere
-   dem til Git eller chat.
-3. Med to testbrukere: test IDOR/RLS for profiler, annonser, meldinger,
-   betalinger og Storage; test parallelle Stripe/Vipps-startkall, dobbel
-   webhook, full refusjon og sletting/status under åpen betaling.
-4. Aktiver minst 12 tegn, lekkede-passord-kontroll, CAPTCHA, forsvarlige Auth-
-   rate limits, egnet SMTP/SPF/DKIM/DMARC og MFA for administratorer.
-5. Fyll alle juridiske plassholdere og få vilkår, refusjon, angrerett,
-   personvern og slettefrister kvalitetssikret.
-6. Bruk en separat administratorkonto med MFA, et nøytralt egendefinert domene,
-   virksomhets-e-post/telefon og verifisert Stripe/Vipps-visningsnavn. Ikke bruk
-   privat kontaktinformasjon i nettsted, kvitteringer eller kontoutskriftstekst.
+## 6. Prioritert administratorliste
 
-### Første uke
+### Kritisk før offentlig lansering
 
-1. Sett alarmer på økning i 401/403/409/429/5xx, webhook-feil, gjentatte
-   betalingsforsøk, Storage-kvote og moderatorhendelser.
-2. Test backup-gjenoppretting, dokumenter RTO/RPO og lag en kontaktliste for
-   Supabase, Stripe, Vipps, hosting og Datatilsynet.
-3. Innfør administratortilgang med separat konto, MFA, minste privilegium og
-   månedlig tilgangsrevisjon.
-4. Planlegg isolert mediescanning/transkoding før stor trafikk.
+1. Ta Supabase-backup. Kjør alle manglende migreringer i oppgitt rekkefølge i
+   staging, særlig 28. august, 31. august og
+   `2026-09-01_reporting_hardening.sql`; kjør deretter i produksjon. Ikke bruk
+   fresh-install-skjemaet.
+2. Deploy alle endrede Edge Functions som importerer `_shared/cors.ts` eller de
+   endrede Supabase-hjelperne. Bekreft at localhost nå får 403 i produksjon.
+3. Med to testkontoer: test CRUD/IDOR for profiler, annonser, meldinger,
+   rapporter, betalinger og Storage; test Realtime-filtrering og at RPC-mangel
+   feiler lukket.
+4. Kjør Stripe/Vipps sandbox: parallelle startkall, manipulert produkt/beløp,
+   dobbel/replayet webhook, feil signatur, full refusjon og åpen-ordre-lås.
+5. Aktiver minst 12 tegn, lekkede-passord-kontroll, CAPTCHA, forsvarlige Auth-
+   grenser, egen SMTP med SPF/DKIM/DMARC og MFA for administratorer.
+6. Fyll alle juridiske plassholdere og få personvern, vilkår, angrerett,
+   refusjon, moderering og slettefrister kvalitetssikret.
+7. Flytt til nøytralt egendefinert domene og bruk virksomhetskontakt. Sett
+   Stripe/Vipps i produksjon først etter full leverandørverifisering og en
+   dokumentert go-live-beslutning.
+
+### Første uke etter kontrollert lansering
+
+1. Varsle på økning i 401/403/409/429/5xx, webhook-feil, betalingsforsøk,
+   Storage-kvote, rapportspam og moderatorhandlinger.
+2. Test backup-gjenoppretting, dokumenter RTO/RPO og kontaktliste for Supabase,
+   Stripe, Vipps, hosting og Datatilsynet.
+3. Sett administratorroller via separat MFA-konto, minste privilegium og
+   revisjonsspor. Ikke bruk privat hovedkonto i daglig moderering.
+4. Planlegg isolert mediescanning/transkoding og foreldreløs-media-opprydding.
 
 ### Månedlig og ved hver release
 
-1. Kjør full test, produksjonsbygg, `npm audit`, Supabase Security Advisor og
-   kontroll av faktiske responsheadere.
-2. Gå gjennom avhengelsesoppdateringer, webhook-feil, auth-/betalingslogger,
-   moderatoravgjørelser og unormalt høy meldings-/opplastingsaktivitet.
-3. Test restore, roter secrets etter plan eller mistanke, fjern gamle
-   tilganger og gjennomfør en enkel hendelsesøvelse.
+1. Kjør `npm ci`, full test, typekontroll, produksjonsbygg, `npm audit`,
+   Supabase Security Advisor og faktiske header-/CORS-prober.
+2. Gå gjennom avhengelser, beta-komponenter, webhook-/auth-/betalingslogger,
+   rapporter, moderatorhistorikk og unormalt høy meldings-/Storage-aktivitet.
+3. Test restore, roter secrets etter plan/mistanke, fjern gamle tilganger og
+   gjennomfør en enkel hendelsesøvelse.

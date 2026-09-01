@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.111.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.111.0';
 import { PublicError } from './http.ts';
 
 function requiredEnv(name: string) {
@@ -30,4 +30,3 @@ export async function requireUser(request: Request) {
   if (error || !user) throw new PublicError(401, 'AUTH_REQUIRED', 'Du må være logget inn.');
   return { client, user };
 }
-

@@ -11,6 +11,9 @@ const prepare = read('scripts/prepare-public.mjs');
 const nextConfig = read('next.config.ts');
 const http = read('supabase/functions/_shared/http.ts');
 const cors = read('supabase/functions/_shared/cors.ts');
+const edgeSupabase = read('supabase/functions/_shared/supabase.ts');
+const reconcile = read('supabase/functions/_shared/reconcile.ts');
+const stripeReconcile = read('supabase/functions/_shared/stripe-reconcile.ts');
 const migration = read('migrations/2026-08-28_media_and_input_hardening.sql');
 
 for (const directive of [
@@ -42,10 +45,17 @@ assert.match(http, /UNSUPPORTED_MEDIA_TYPE/);
 assert.match(http, /'cache-control': 'no-store'/);
 assert.match(cors, /ALLOW_LOCAL_ORIGINS/);
 assert.match(cors, /localOriginsEnabled\(\) && LOCAL_ORIGINS\.has\(origin\)/);
+assert.match(cors, /LOCAL_ORIGINS\.has\(appOrigin\)[\s\S]{0,100}&& Deno\.env\.get\('ALLOW_LOCAL_ORIGINS'\) === 'true'/);
+assert.doesNotMatch(cors, /LOCAL_ORIGINS\.has\(appOrigin\)\)[\s\S]{0,20}\|\|/);
+
+for (const source of [edgeSupabase, reconcile, stripeReconcile]) {
+  assert.doesNotMatch(source, /https:\/\/esm\.sh/);
+  assert.match(source, /npm:@supabase\/supabase-js@2\.111\.0/);
+}
 
 assert.match(migration, /is_owned_public_storage_url/);
 assert.match(migration, /storage_quota_available\('listing-images', 500\)/);
 assert.match(migration, /storage_quota_available\('listing-videos', 20\)/);
 assert.match(migration, /name = auth\.uid\(\)::text \|\| '\/avatar\.webp'/);
 
-console.log('Sikkerhetsherding: 29 statiske kontroller besto.');
+console.log('Sikkerhetsherding: 37 statiske kontroller besto.');

@@ -427,7 +427,12 @@ async function fetchPage(filters, page, append) {
   installOwnerAvatarFallbacks(grid);
   const resultSummary = document.getElementById('results-summary');
   const totalCount = (count || 0) + featuredListingIds.length;
-  if (resultSummary) resultSummary.textContent = `${totalCount} ${totalCount === 1 ? 'annonse' : 'annonser'}`;
+  const rankingIsCapped = rankAllResults && (count || 0) > MAX_CLIENT_RANKED_RESULTS;
+  if (resultSummary) {
+    resultSummary.textContent = rankingIsCapped
+      ? `${totalCount} annonser · Smart Match rangerer de ${MAX_CLIENT_RANKED_RESULTS} nyeste ordinære treffene`
+      : `${totalCount} ${totalCount === 1 ? 'annonse' : 'annonser'}`;
+  }
   const availableCount = rankAllResults ? Math.min(count || 0, MAX_CLIENT_RANKED_RESULTS) : (count || 0);
   loadMoreButton.classList.toggle('hidden', (page + 1) * PAGE_SIZE >= availableCount);
   return { propertyTypeUnavailable };

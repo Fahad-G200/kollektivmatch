@@ -10,7 +10,7 @@ nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse tretten migreringene i rekkefølge:
+skal du kjøre disse fjorten migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -37,6 +37,8 @@ skal du kjøre disse tretten migreringene i rekkefølge:
 `migrations/2026-08-28_payment_and_storage_followup.sql`
 
 `migrations/2026-08-31_contact_privacy_hardening.sql`
+
+`migrations/2026-09-01_reporting_hardening.sql`
 
 Migreringen er ikke-destruktiv og legger til felter, validering, funksjoner,
 rettigheter og policyer uten å slette eksisterende data. `schema.sql` er nå kun
@@ -86,7 +88,8 @@ CDN-kjøring brukes ikke.
    `migrations/2026-08-27_boost_delivery_guard.sql` og
    `migrations/2026-08-28_media_and_input_hardening.sql` og
    `migrations/2026-08-28_payment_and_storage_followup.sql` og
-   `migrations/2026-08-31_contact_privacy_hardening.sql`. Alle er
+   `migrations/2026-08-31_contact_privacy_hardening.sql` og
+   `migrations/2026-09-01_reporting_hardening.sql`. Alle er
    additive og skal ikke slette eksisterende brukere eller annonser.
 3. Åpne **Authentication → URL Configuration**.
 4. Sett **Site URL** til den faktiske rotadressen. Lokalt kan dette være
@@ -336,8 +339,9 @@ brukeren godtar gjeldende vilkår; e-postskjemaets avkryssing dekker ikke OAuth.
 - Boligtype, romstørrelse, depositum, møblering, inkludert husleie og
   annonsestatus støttes gjennom hele flyten.
 - Smart Match normaliserer bare over vurderbare preferanser. Aktive søkefiltre
-  overstyrer samme lagrede profilvalg, manglende data gir ingen poeng, og hele
-  resultatsettet rangeres før paginering når «Beste match» brukes. Hver vist
+  overstyrer samme lagrede profilvalg, manglende data gir ingen poeng, og opptil
+  de 500 nyeste ordinære treffene rangeres før paginering når «Beste match»
+  brukes. Ved større resultatsett opplyser grensesnittet om grensen. Hver vist
   prosent kan åpnes for å se oppfylte, delvise og svake kriterier.
 - Skole/studiested er et frivillig søkefelt basert på Kartverkets åpne
   stedsnavn-API. Valgt skole kan sortere annonser etter nærhet og inngå i den
@@ -350,7 +354,9 @@ brukeren godtar gjeldende vilkår; e-postskjemaets avkryssing dekker ikke OAuth.
 - Anonyme brukere får fortsatt ikke lese `contact_info` eller private
   profilfelt.
 - Rapporter lagres i `reports`. Moderator-RPC-ene kontrollerer en serverstyrt
-  rolle; et eget admin-grensesnitt er fortsatt anbefalt.
+  rolle. Innlevering går gjennom en serverstyrt RPC med timegrense, og
+  moderatorhandlinger får et separat, nettleserutilgjengelig revisjonsspor. Et
+  eget admin-grensesnitt er fortsatt anbefalt.
 - Brukere kan laste ned maskinlesbar kopi av egne data og slette konto, innhold
   og refererte annonsebilder fra «Min side».
 - Profilen støtter valgfritt profilbilde og omtrentlig time-, måneds- eller
@@ -441,6 +447,7 @@ kollektivmatch/
 ├── migrations/2026-08-28_media_and_input_hardening.sql
 ├── migrations/2026-08-28_payment_and_storage_followup.sql
 ├── migrations/2026-08-31_contact_privacy_hardening.sql
+├── migrations/2026-09-01_reporting_hardening.sql
 ├── supabase/config.toml
 ├── supabase/functions/{create-boost-payment,create-stripe-boost-payment,get-boost-payment-status,
 │   vipps-payment-webhook,refund-boost-payment,start-vipps-verification,

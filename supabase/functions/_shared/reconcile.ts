@@ -1,4 +1,4 @@
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.111.0';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.111.0';
 import { PublicError } from './http.ts';
 import { captureVippsPayment, getVippsPayment } from './vipps.ts';
 import {

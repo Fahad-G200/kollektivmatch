@@ -53,8 +53,9 @@ async function completeAuth() {
       refresh_token: fragment.get('refresh_token'),
     });
   } else {
-    result = await supabase.auth.getSession();
-    if (!result.data?.session) result = { error: new Error('Ingen gyldig økt') };
+    clearSensitiveUrl();
+    showError();
+    return;
   }
 
   clearSensitiveUrl();

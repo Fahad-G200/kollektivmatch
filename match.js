@@ -95,6 +95,7 @@ function addCriterion(state, weight, ratio, label, detail = '', alwaysExplain = 
 }
 
 export function schoolProximityRatio(distanceKm) {
+  if (distanceKm === null || distanceKm === undefined || String(distanceKm).trim() === '') return null;
   const distance = Number(distanceKm);
   if (!Number.isFinite(distance) || distance < 0) return null;
   if (distance <= 1) return 1;
@@ -187,7 +188,7 @@ export function computeMatch(listing, profile, context = {}) {
       { latitude: listing.location_lat, longitude: listing.location_lon },
       { latitude: school.latitude, longitude: school.longitude },
     );
-    const proximityRatio = schoolProximityRatio(schoolDistanceKm);
+    const proximityRatio = schoolDistanceKm === null ? null : schoolProximityRatio(schoolDistanceKm);
     if (proximityRatio !== null) {
       const roundedDistance = schoolDistanceKm < 10
         ? schoolDistanceKm.toLocaleString('nb-NO', { maximumFractionDigits: 1 })

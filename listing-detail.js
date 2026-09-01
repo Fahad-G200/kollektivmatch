@@ -202,13 +202,18 @@ document.getElementById('report-form').addEventListener('submit', async (event) 
   const button = document.getElementById('report-submit');
   button.disabled = true;
   const data = new FormData(event.target);
-  const { error } = await supabase.from('reports').insert({ listing_id: listing.id, reporter_id: viewer.id, reason: data.get('reason'), details: data.get('details').trim() || null });
+  const reportPayload = {
+    p_listing_id: listing.id,
+    p_reason: data.get('reason'),
+    p_details: data.get('details').trim() || null,
+  };
+  const { error } = await supabase.rpc('submit_report', reportPayload);
   button.disabled = false;
   if (error) {
     console.error('Kunne ikke sende rapport:', error.message);
-    showToast(isMissingReportsError(error)
+    showToast(isMissingReportsError(error) || isMissingFunctionError(error)
       ? 'Rapportering krever at databasemigreringen installeres.'
-      : 'Rapporten kunne ikke sendes. Du kan bare rapportere samme annonse én gang.', 'error');
+      : 'Rapporten kunne ikke sendes. Du kan bare rapportere samme annonse én gang, og det er en timegrense mot misbruk.', 'error');
   } else {
     event.target.reset();
     showToast('Takk. Rapporten er sendt til gjennomgang.', 'success');
@@ -238,12 +243,7 @@ async function init() {
   }
   listing = data;
   if (viewer) {
-    let { data: contactInfo, error: contactError } = await supabase.rpc('get_listing_contact', { p_listing_id: id });
-    if (contactError && isMissingFunctionError(contactError)) {
-      const legacyContact = await supabase.from('listings').select('contact_info').eq('id', id).single();
-      contactInfo = legacyContact.data?.contact_info ?? null;
-      contactError = legacyContact.error;
-    }
+    const { data: contactInfo, error: contactError } = await supabase.rpc('get_listing_contact', { p_listing_id: id });
     if (contactError) {
       contactLoadError = true;
       console.warn('Kontaktinformasjonen ble ikke hentet:', contactError.message);

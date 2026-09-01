@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm } from '../match.js';
+import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm, schoolProximityRatio } from '../match.js';
 
 const baseListing = {
   id: 'a',
@@ -142,11 +142,48 @@ const missingTransit = computeMatch(
 );
 assert.equal(missingTransit, null, 'Manglende kollektivdata skal ikke feilaktig behandles som 0 minutter');
 
+const partiallyOverBudget = computeMatch(
+  { ...baseListing, price: 9000 },
+  { monthly_budget_max: 8000, preferred_property_types: ['leilighet'] },
+);
+assert.equal(partiallyOverBudget.score, 85, 'Budsjettavvik skal gi en kontrollert delscore, ikke et vilkårlig hopp');
+
+const completeMismatch = computeMatch(
+  { ...baseListing, price: 16000, property_type: 'leilighet' },
+  { monthly_budget_max: 8000, preferred_property_types: ['hybel'] },
+);
+assert.equal(completeMismatch.score, 0, 'To vurderbare kriterier kan gi 0 prosent uten NaN eller falske poeng');
+
+for (const budget of [1, 5000, 8000, 1000000]) {
+  for (const price of [1, 5000, 8000, 1000000]) {
+    const result = computeMatch(
+      { ...baseListing, price },
+      { monthly_budget_max: budget, preferred_property_types: ['leilighet'] },
+    );
+    assert.ok(Number.isInteger(result.score) && result.score >= 0 && result.score <= 100, 'Matchscore skal alltid være et heltall i intervallet 0–100');
+  }
+}
+
+assert.equal(computeMatch(baseListing, {}, {
+  school: { name: 'Ugyldig punkt', latitude: 91, longitude: 10 },
+}), null, 'Ugyldige skolekoordinater skal ikke gi en nærhetsmatch');
+assert.equal(schoolProximityRatio(null), null, 'Manglende avstand skal ikke tolkes som 0 km');
+assert.equal(computeMatch({ ...baseListing, location_lat: null, location_lon: null }, {}, {
+  school: { name: 'Universitetet i Oslo', latitude: 59.9375, longitude: 10.71905 },
+}), null, 'Annonser uten koordinater skal ikke krasje eller få falsk skolenærhet');
+
+const duplicateFilterTags = buildMatchPreferences({}, {
+  amenities: ['matbutikk', 'matbutikk'],
+  lifestyleTags: ['rolig-miljo', 'matbutikk'],
+});
+assert.deepEqual(duplicateFilterTags.priority_tags, ['matbutikk', 'rolig-miljo'], 'Duplikate filterverdier skal normaliseres før beregning');
+
 const sameScoreThin = { ...baseListing, _match: { score: 100, criteria: 2 }, created_at: '2026-08-22T00:00:00Z' };
 const sameScoreSolid = { ...baseListing, id: 'solid', _match: { score: 100, criteria: 6 }, created_at: '2026-01-01T00:00:00Z' };
 assert.ok(compareBestMatch(sameScoreSolid, sameScoreThin) < 0, 'Lik prosent skal prioritere resultatet med sterkest datagrunnlag');
 
 const feedSource = readFileSync(new URL('../feed.js', import.meta.url), 'utf8');
 assert.match(feedSource, /rankAllMatchResults[\s\S]+MAX_CLIENT_RANKED_RESULTS[\s\S]+data\.sort\(compareBestMatch\)[\s\S]+data = data\.slice/, 'Beste match skal rangeres før paginering');
+assert.match(feedSource, /rankingIsCapped[\s\S]+Smart Match rangerer de \$\{MAX_CLIENT_RANKED_RESULTS\} nyeste ordinære treffene/, 'Store resultatsett skal opplyse om rangeringsgrensen');
 
-console.log('Smart Match: 21 tester besto.');
+console.log('Smart Match: 29 tester besto.');
