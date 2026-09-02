@@ -282,7 +282,10 @@ serverkontroll har bekreftet riktig ordre, beløp, valuta og betalt status.
    inn oppgjørskonto bare i Stripe Dashboard – aldri i prosjektfiler eller chat.
 2. Start i testmodus. Sett `STRIPE_ENVIRONMENT=test`, testnøkkelen som
    `STRIPE_SECRET_KEY`, webhook-hemmeligheten som `STRIPE_WEBHOOK_SECRET` og
-   korrekt `APP_BASE_URL` som Supabase Edge Function-secrets.
+   korrekt `APP_BASE_URL` som Supabase Edge Function-secrets. Testbetaling er
+   bare tillatt mot localhost som standard. En separat, privat staging-side kan
+   bruke `ALLOW_DEPLOYED_TEST_PAYMENTS=true`; flagget skal aldri stå på for en
+   offentlig eller produksjonsmerket side.
 3. Kjør `migrations/2026-08-26_stripe_boost_fallback.sql` i Supabase SQL Editor.
 4. Deploy de nye og oppdaterte funksjonene:
 

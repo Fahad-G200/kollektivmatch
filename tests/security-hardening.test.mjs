@@ -15,6 +15,7 @@ const edgeSupabase = read('supabase/functions/_shared/supabase.ts');
 const reconcile = read('supabase/functions/_shared/reconcile.ts');
 const stripeReconcile = read('supabase/functions/_shared/stripe-reconcile.ts');
 const migration = read('migrations/2026-08-28_media_and_input_hardening.sql');
+const environmentExample = read('.env.example');
 
 for (const directive of [
   "default-src 'self'", "script-src 'self'", "script-src-attr 'none'",
@@ -47,6 +48,7 @@ assert.match(cors, /ALLOW_LOCAL_ORIGINS/);
 assert.match(cors, /localOriginsEnabled\(\) && LOCAL_ORIGINS\.has\(origin\)/);
 assert.match(cors, /LOCAL_ORIGINS\.has\(appOrigin\)[\s\S]{0,100}&& Deno\.env\.get\('ALLOW_LOCAL_ORIGINS'\) === 'true'/);
 assert.doesNotMatch(cors, /LOCAL_ORIGINS\.has\(appOrigin\)\)[\s\S]{0,20}\|\|/);
+assert.match(environmentExample, /ALLOW_DEPLOYED_TEST_PAYMENTS=false/);
 
 for (const source of [edgeSupabase, reconcile, stripeReconcile]) {
   assert.doesNotMatch(source, /https:\/\/esm\.sh/);
@@ -58,4 +60,4 @@ assert.match(migration, /storage_quota_available\('listing-images', 500\)/);
 assert.match(migration, /storage_quota_available\('listing-videos', 20\)/);
 assert.match(migration, /name = auth\.uid\(\)::text \|\| '\/avatar\.webp'/);
 
-console.log('Sikkerhetsherding: 37 statiske kontroller besto.');
+console.log('Sikkerhetsherding: 38 statiske kontroller besto.');

@@ -32,6 +32,10 @@ function required(name: string) {
   return value;
 }
 
+function isLocalAppUrl(url: URL) {
+  return ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+}
+
 export function getVippsConfig(): VippsConfig {
   const environment = required('VIPPS_ENVIRONMENT');
   if (environment !== 'test' && environment !== 'production') {
@@ -60,6 +64,14 @@ export function getVippsConfig(): VippsConfig {
     || appUrl.hash
     || appUrl.pathname !== '/'
   ) {
+    throw new PublicError(503, 'VIPPS_PAYMENT_NOT_CONFIGURED', 'Vipps-betaling er ikke aktivert ennå. Prøv igjen senere.');
+  }
+  if (
+    environment === 'test'
+    && !isLocalAppUrl(appUrl)
+    && Deno.env.get('ALLOW_DEPLOYED_TEST_PAYMENTS') !== 'true'
+  ) {
+    console.error('Vipps testbetaling er sperret pa deployert origin');
     throw new PublicError(503, 'VIPPS_PAYMENT_NOT_CONFIGURED', 'Vipps-betaling er ikke aktivert ennå. Prøv igjen senere.');
   }
 

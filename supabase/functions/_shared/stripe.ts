@@ -30,6 +30,10 @@ function required(name: string) {
   return value;
 }
 
+function isLocalAppUrl(url: URL) {
+  return ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+}
+
 export function getStripeConfig(): StripeConfig {
   const environment = required('STRIPE_ENVIRONMENT');
   if (environment !== 'test' && environment !== 'production') {
@@ -59,6 +63,14 @@ export function getStripeConfig(): StripeConfig {
     throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
   }
   if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash || appUrl.pathname !== '/') {
+    throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
+  }
+  if (
+    environment === 'test'
+    && !isLocalAppUrl(appUrl)
+    && Deno.env.get('ALLOW_DEPLOYED_TEST_PAYMENTS') !== 'true'
+  ) {
+    console.error('Stripe testbetaling er sperret pa deployert origin');
     throw new PublicError(503, 'STRIPE_PAYMENT_NOT_CONFIGURED', 'Kortbetaling er ikke aktivert ennå. Prøv igjen senere.');
   }
 

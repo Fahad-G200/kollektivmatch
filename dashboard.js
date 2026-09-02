@@ -197,6 +197,11 @@ async function loadPaymentCapabilities() {
     : data;
 }
 
+function productionPaymentReady() {
+  return paymentCapabilities?.stripe_payment_ready === true
+    && paymentCapabilities?.environment === 'production';
+}
+
 function checkValues(name, values) {
   preferencesForm.querySelectorAll(`input[name="${name}"]`).forEach((input) => { input.checked = (values || []).includes(input.value); });
 }
@@ -585,7 +590,9 @@ function listingCard(item) {
     : '<p class="text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">Statusstyring krever databaseoppdatering</p>';
   const featuredInfo = featured ? `<div class="featured-purchase-note"><strong>Fremhevet · kjøpt plassering</strong><span>til ${formatDate(item.featured_until)}</span></div>` : '';
   const paymentNote = paymentOpen ? '<p class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">Betaling kontrolleres. Status og sletting er midlertidig låst slik at fremhevingen kan leveres.</p>' : '';
-  const boostButton = hasStatus ? `<button type="button" data-action="boost" data-id="${itemId}" ${item.status !== 'active' || paymentOpen ? 'disabled' : ''} class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed">${paymentOpen ? 'Betaling pågår' : 'Fremhev annonse'}</button>` : '';
+  const boostButton = hasStatus && boostAvailable && productionPaymentReady()
+    ? `<button type="button" data-action="boost" data-id="${itemId}" ${item.status !== 'active' || paymentOpen ? 'disabled' : ''} class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed">${paymentOpen ? 'Betaling pågår' : 'Fremhev annonse'}</button>`
+    : '';
   const seekersButton = item.status === 'active' ? `<a href="home-seekers.html?listing=${encodeURIComponent(item.id)}" class="px-4 py-2 text-sm font-semibold rounded-lg bg-[#FFF6EE] text-[#8A4E21] hover:bg-[#FCEBDD]">Finn boligsøkere</a>` : '';
   return `
     <article class="bg-white p-6 rounded-2xl border border-line shadow-sm space-y-4" data-listing-id="${itemId}">
@@ -663,7 +670,7 @@ function renderBoostProducts() {
     return;
   }
   container.innerHTML = boostProducts.map((product, index) => `<label class="boost-product-option"><input type="radio" name="product_id" value="${escapeHtml(product.id)}" ${index === 0 ? 'checked' : ''} class="sr-only peer"><span class="block text-sm font-bold">${escapeHtml(product.name)}</span><span class="block text-2xl font-bold text-primary-700 mt-2">${formatNokFromOre(product.price_ore)}</span><span class="block text-xs text-mist mt-1">Én betaling · ${product.duration_days} dager</span></label>`).join('');
-  const methods = paymentCapabilities?.stripe_payment_ready === true
+  const methods = productionPaymentReady()
     ? [{ id: 'stripe', title: 'Kort eller digital lommebok', detail: 'Sikker betaling levert av Stripe' }]
     : [];
   methodsContainer.innerHTML = methods.length
@@ -671,7 +678,9 @@ function renderBoostProducts() {
     : '<p class="sm:col-span-2 text-sm text-mist">Ingen betalingskonto er koblet til ennå.</p>';
   availabilityNote.textContent = methods.length
     ? ''
-    : 'Stripe-kontoen må være ferdig konfigurert før betaling kan starte.';
+    : paymentCapabilities?.environment === 'test'
+      ? 'Betalt fremheving er deaktivert mens betalingsløsningen er i testmodus.'
+      : 'Stripe-kontoen må være produksjonsgodkjent og ferdig konfigurert før betaling kan starte.';
   availabilityNote.classList.toggle('hidden', methods.length > 0);
   payButton.disabled = methods.length === 0;
   updateBoostPaymentMethod();
@@ -693,6 +702,7 @@ function updateBoostTotal() {
 
 function openBoostModal(item) {
   if (!boostAvailable) return showToast('Betalingsløsningen må aktiveres i Supabase først.', 'error');
+  if (!productionPaymentReady()) return showToast('Betalt fremheving er ikke aktivert for ekte betaling ennå.', 'error');
   selectedBoostListing = item;
   boostForm.reset();
   document.getElementById('boost-listing-title').textContent = item.title;
@@ -715,7 +725,7 @@ boostForm.addEventListener('submit', async (event) => {
   const errorBox = document.getElementById('boost-error');
   const data = new FormData(boostForm);
   const providerReady = data.get('payment_provider') === 'stripe'
-    && paymentCapabilities?.stripe_payment_ready === true;
+    && productionPaymentReady();
   if (!providerReady) {
     errorBox.textContent = 'Den valgte betalingsmåten er ikke aktivert ennå.';
     errorBox.classList.remove('hidden');
@@ -883,6 +893,7 @@ async function init() {
   authNav.innerHTML = `<div class="flex items-center gap-3"><span class="text-xs text-mist hidden sm:inline">${escapeHtml(user.email || '')}</span><button type="button" id="logout-btn" class="px-4 py-2 text-sm font-semibold text-mist hover:text-red-500">Logg ut</button></div>`;
   document.getElementById('logout-btn').addEventListener('click', async () => { await supabase.auth.signOut(); window.location.replace('index.html'); });
   await Promise.all([loadPaymentCapabilities(), loadProfileAndPreferences(), loadListings(), loadConversations(), loadBoostProducts(), loadBoostOrders()]);
+  renderListings();
   const params = new URLSearchParams(window.location.search);
   const publishedId = params.get('published');
   if (params.get('boost') === '1' && UUID_PATTERN.test(publishedId || '')) {

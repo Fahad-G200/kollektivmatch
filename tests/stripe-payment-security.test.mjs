@@ -35,6 +35,8 @@ assert.match(stripe, /Math\.abs\(nowSeconds - timestamp\) > 300/);
 assert.match(stripe, /crypto\.subtle\.sign\('HMAC'/);
 assert.match(stripe, /constantTimeEqual\(candidate, expected\)/);
 assert.match(stripe, /redirect\.hostname !== 'checkout\.stripe\.com'/);
+assert.match(stripe, /ALLOW_DEPLOYED_TEST_PAYMENTS/);
+assert.match(stripe, /environment === 'test'[\s\S]+!isLocalAppUrl\(appUrl\)[\s\S]+ALLOW_DEPLOYED_TEST_PAYMENTS/s);
 
 assert.match(webhook, /const rawBody = await readTextBody\(request, 256 \* 1024\)[\s\S]+verifyStripeWebhook\(request, rawBody\)/s);
 assert.match(webhook, /checkout\.session\.completed/);
@@ -52,6 +54,9 @@ assert.match(integrationStatus, /requireStripeWebhookSecret\(\)/);
 assert.doesNotMatch(integrationStatus, /Vipps|vipps/);
 assert.match(dashboard, /functions\.invoke\('payment-integration-status'/);
 assert.match(dashboard, /functions\.invoke\('create-stripe-boost-payment'/);
+assert.match(dashboard, /productionPaymentReady\(\)[\s\S]+environment === 'production'/s);
+assert.match(dashboard, /const methods = productionPaymentReady\(\)/);
+assert.match(dashboard, /const providerReady = [\s\S]+productionPaymentReady\(\)/);
 assert.doesNotMatch(dashboard, /create-boost-payment|vipps/i);
 assert.doesNotMatch(dashboard, /from\('listings'\).*update[\s\S]*is_featured/s, 'Frontend skal ikke aktivere fremheving');
 assert.match(deliveryGuard, /before delete or update of status on public\.listings/i);
@@ -76,4 +81,4 @@ const frontendFiles = walk(root).filter((path) => {
 const frontend = frontendFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
 assert.doesNotMatch(frontend, /sk_(?:test|live)_|whsec_|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET/);
 
-console.log('Stripe-fremheving: 41 sikkerhetskontroller besto.');
+console.log('Stripe-fremheving: 46 sikkerhetskontroller besto.');

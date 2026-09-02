@@ -37,6 +37,8 @@ assert.match(webhookAuth, /buildVippsAuthorization/);
 assert.match(webhookSignature, /crypto\.subtle\.sign\('HMAC'/);
 assert.match(vipps, /VIPPS_PRODUCTION_CONFIRMED/);
 assert.match(vipps, /apiBase !== 'https:\/\/api\.vipps\.no'/);
+assert.match(vipps, /ALLOW_DEPLOYED_TEST_PAYMENTS/);
+assert.match(vipps, /environment === 'test'[\s\S]+!isLocalAppUrl\(appUrl\)[\s\S]+ALLOW_DEPLOYED_TEST_PAYMENTS/s);
 assert.match(resultPage, /order\.status === 'captured'/);
 assert.doesNotMatch(resultPage, /from\('listings'\).*update|is_featured|featured_until/s, 'Return-siden skal aldri aktivere fremheving');
 assert.match(dashboard, /button\.disabled = true[\s\S]+create-stripe-boost-payment/);
@@ -59,4 +61,4 @@ const frontend = frontendFiles.map((path) => readFileSync(path, 'utf8')).join('\
 assert.doesNotMatch(frontend, /VIPPS_CLIENT_SECRET|VIPPS_SUBSCRIPTION_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|SUPABASE_SERVICE_ROLE_KEY/);
 assert.doesNotMatch(frontend, /\.update\(\s*\{[^}]*is_featured/s);
 
-console.log('Betalingssikkerhet: 25 statiske kontroller besto.');
+console.log('Betalingssikkerhet: 27 statiske kontroller besto.');
