@@ -13,8 +13,10 @@ const htmlByName = new Map(htmlNames.map((name) => [name, read(name)]));
 for (const [name, html] of htmlByName) {
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, `${name} har duplikate id-attributter`);
-  for (const match of html.matchAll(/href="([^"#?]+\.html)(?:[?#][^"]*)?"/g)) {
-    const target = match[1].replace(/^\.\//, '');
+  for (const match of html.matchAll(/href="([^"]+)"/g)) {
+    const href = match[1];
+    if (!/\.html(?:[?#]|$)/.test(href) || /^(?:https?:)?\/\//i.test(href)) continue;
+    const target = href.split(/[?#]/, 1)[0].replace(/^\.\//, '');
     assert.ok(htmlByName.has(target), `${name} lenker til manglende ${target}`);
   }
   for (const match of html.matchAll(/<a\b[^>]*target="_blank"[^>]*>/g)) {
