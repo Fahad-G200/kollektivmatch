@@ -1039,3 +1039,38 @@ summary:focus-visible,
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #DAD0FF; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #BFABFF; }
+
+/* Search and housing cards */
+.search-intro { display:flex; align-items:center; justify-content:space-between; gap:2rem; padding-top:3.25rem; padding-bottom:2rem; }
+.search-intro h1 { margin-top:.65rem; letter-spacing:-.045em; line-height:1.12; }
+.search-intro p { max-width:40rem; }
+.intro-action { flex-shrink:0; display:flex; align-items:center; gap:1rem; padding:.8rem 1.2rem; border:1px solid var(--border-color); border-radius:1rem; background:white; font-size:.875rem; font-weight:650; }
+.intro-action:hover { border-color:var(--primary); color:var(--primary); }
+.search-panel { box-shadow:0 16px 48px -30px rgba(61,46,125,.25); }
+.search-panel label { font-size:.875rem; }
+.search-panel input,.search-panel select { font-size:1rem; min-height:2.75rem; }
+.example-notice { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.1rem 1.3rem; border-radius:1rem; border:1px solid #d7cfee; background:#f4f2ff; }
+.example-notice p { margin-top:.3rem; max-width:44rem; color:var(--text-muted); font-size:.875rem; line-height:1.6; }
+.example-count { font-size:.875rem; white-space:nowrap; color:var(--primary-hover); font-weight:650; }
+.example-badge { position:absolute; top:.75rem; left:.75rem; z-index:10; padding:.35rem .7rem; border-radius:999px; background:#211c33; color:white; font-size:.75rem; font-weight:650; }
+[data-property-art] { background-image:url('../assets/property-types-triptych.png'); background-size:300% auto; background-repeat:no-repeat; }
+[data-property-art="apartment"] { background-position:left center; }
+[data-property-art="house"] { background-position:center center; }
+[data-property-art="cabin"] { background-position:right center; }
+.listing-card-title { min-width:0; font-size:1rem; font-weight:700; line-height:1.4; }
+.listing-card-price { font-size:1.25rem; letter-spacing:-.025em; }
+.example-card-footer { display:flex; align-items:center; justify-content:space-between; gap:.6rem; font-size:.875rem; color:var(--text-muted); }
+.example-card-footer a { color:var(--primary-hover); font-weight:650; }
+@media(max-width:767px) { .search-intro { display:block; padding-top:2rem; } .intro-action { margin-top:1.25rem; width:fit-content; } .example-notice { align-items:flex-start; flex-direction:column; } }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+
+.purchased-placement-badge.hidden { display:none; }
+.listing-card p:not(.listing-card-price), .match-breakdown-intro, .match-breakdown-row { font-size:.875rem; }
+.listing-card { align-self:start; }
+
+@media (max-width: 480px) {
+  .brand-name { font-size: .95rem; }
+  #user-menu { gap: .4rem; }
+  #user-menu a, #logout-btn { font-size: .8rem; }
+  #logout-btn { padding: .5rem; }
+}

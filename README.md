@@ -10,7 +10,7 @@ nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse fjorten migreringene i rekkefølge:
+skal du kjøre disse seksten migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -39,6 +39,10 @@ skal du kjøre disse fjorten migreringene i rekkefølge:
 `migrations/2026-08-31_contact_privacy_hardening.sql`
 
 `migrations/2026-09-01_reporting_hardening.sql`
+
+`migrations/2026-09-07_public_listing_access.sql`
+
+`migrations/2026-09-07_cabin_property_type.sql`
 
 Migreringen er ikke-destruktiv og legger til felter, validering, funksjoner,
 rettigheter og policyer uten å slette eksisterende data. `schema.sql` er nå kun
@@ -89,7 +93,9 @@ CDN-kjøring brukes ikke.
    `migrations/2026-08-28_media_and_input_hardening.sql` og
    `migrations/2026-08-28_payment_and_storage_followup.sql` og
    `migrations/2026-08-31_contact_privacy_hardening.sql` og
-   `migrations/2026-09-01_reporting_hardening.sql`. Alle er
+   `migrations/2026-09-01_reporting_hardening.sql`,
+   `migrations/2026-09-07_public_listing_access.sql` og
+   `migrations/2026-09-07_cabin_property_type.sql`. Alle er
    additive og skal ikke slette eksisterende brukere eller annonser.
 3. Åpne **Authentication → URL Configuration**.
 4. Sett **Site URL** til den faktiske rotadressen. Lokalt kan dette være
@@ -137,40 +143,19 @@ CDN-kjøring brukes ikke.
 12. Test med egne testbrukere. Ikke test sletting eller policyforsøk mot
     produksjonsdata.
 
-## Slik aktiverer du Vipps-kontobekreftelse
+## Avviklet Vipps-kontobekreftelse
 
-Vipps-koblingen bruker Authorization Code-flyt med PKCE S256, tilfeldig state og
-nonce, server-side kodeutveksling, signaturkontroll av ID token via Vipps JWKS,
-issuer/audience/utløp-kontroll og samsvar med Userinfo. Bare Vipps `sub` og
-tidspunkter lagres. Merket betyr «koblet til en Vipps-konto» og skal aldri
-omtales som BankID eller elektronisk ID.
+Vipps-kontobekreftelse er fjernet fra grensesnittet, og start-/callback-
+funksjonene returnerer nå HTTP 410 uten å behandle innlogging eller identitet.
+Deploy begge for å stenge eventuelle eldre installasjoner:
 
-1. Aktiver **Login** på riktig sales unit i Vipps MobilePay-portalen. Be bare om
-   `openid`-scope; denne løsningen trenger ikke telefon, e-post, adresse eller
-   fødselsnummer.
-2. Registrer callback-adressen helt nøyaktig, inkludert eventuelle skråstreker:
+```bash
+supabase functions deploy start-vipps-verification
+supabase functions deploy vipps-verification-callback --no-verify-jwt
+```
 
-   `https://<PROJECT_REF>.supabase.co/functions/v1/vipps-verification-callback`
-
-3. Sett `VIPPS_LOGIN_CLIENT_ID`, `VIPPS_LOGIN_CLIENT_SECRET`,
-   `VIPPS_LOGIN_SUBSCRIPTION_KEY` og `VIPPS_LOGIN_MSN` som Supabase Edge
-   Function-secrets. Hvis Login og ePayment bruker samme sales unit og nøkler,
-   faller funksjonen tilbake til de tilsvarende `VIPPS_*`-verdiene.
-4. Sett korrekt HTTPS `APP_BASE_URL`. Callbacken sender brukeren tilbake til
-   `<APP_BASE_URL>/vipps-verification-result.html`, som kontrollerer den lagrede
-   profilstatusen i stedet for å stole på URL-parameteren.
-5. Deploy funksjonene:
-
-   ```bash
-   supabase functions deploy start-vipps-verification
-   supabase functions deploy vipps-verification-callback --no-verify-jwt
-   supabase functions deploy vipps-integration-status --no-verify-jwt
-   ```
-
-6. Test fullført flyt, avbrudd, utløpt state, gjenbruk av callback, feil nonce,
-   feil issuer/audience og forsøk på å koble samme Vipps-konto til to brukere.
-   `VIPPS_LOGIN_FORCE_APP_AUTH=true` skal bare brukes når sales unit har advanced
-   Login og støtter `acr_values=urn:vipps:acr:app_auth`.
+Ikke gjenaktiver gammel koblingskode. En fremtidig løsning må knytte godkjenningen
+til nettleseren som startet den, i tillegg til PKCE, state og nonce.
 
 ## Slik aktiverer du ekte Vipps-betaling
 
@@ -492,3 +477,16 @@ Før produksjonssetting må auth-e-post, Storage-RLS, meldings-RPC og responsive
 visninger testes mot et eget Supabase-testprosjekt. Ekstern e-postlevering,
 OAuth, Realtime og databasepolicyer kan ikke fullverifiseres med bare statiske
 prosjektfiler.
+
+## Endringer 7. september 2026
+
+- Søket kommer før inspirasjon og FINN-lenker. To sammenlignbare preferanser,
+  eller en skole med koordinater, gir veiledende matchprosent med korrekt forklaring.
+- Når ingen ekte treff vises, kan brukeren teste seks lokale, tydelig merkede
+  eksempelboliger. De har ingen utleier, meldingsflyt eller betalingsflyt og
+  skrives aldri til Supabase. Hytter støttes også i skjema og preferanser etter
+  den nye migreringen.
+- `2026-09-07_public_listing_access.sql` reparerer anonym annonse-/profillesing
+  uten å åpne private meldinger. Den må kjøres etter rapporteringsmigreringen.
+- `docs/STATUS-2026-09-07.md` skiller mellom lokalt verifiserte rettinger og
+  gjenværende arbeid i drift. Tester alene beviser ikke sikkerheten i produksjon.

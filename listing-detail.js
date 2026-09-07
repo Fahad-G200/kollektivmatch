@@ -1,5 +1,6 @@
 import { supabase } from './supabase-config.js';
 import { showToast } from './ui.js';
+import { getExampleListing } from './example-listings.js';
 import {
   LISTING_IMAGES_BUCKET,
   LISTING_VIDEOS_BUCKET,
@@ -11,7 +12,7 @@ import {
 const id = new URLSearchParams(window.location.search).get('id');
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PLACEHOLDER_IMG = 'assets/placeholder.svg';
-const PROPERTY_LABELS = { leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig', rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', annet: 'Annet' };
+const PROPERTY_LABELS = { leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig', rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', hytte: 'Hytte', annet: 'Annet' };
 const TAG_LABELS = { 'stort-rom': 'Stort rom / plass', 'moderne-stil': 'Moderne stil', 'nyoppusset-bad': 'Nyoppusset bad', 'rolig-miljo': 'Rolig miljø', 'stort-kjokken': 'Stort kjøkken / sosiale soner' };
 const AMENITY_LABELS = { matbutikk: 'Matbutikk', kollektivtransport: 'Kollektivtransport', treningssenter: 'Treningssenter', grontomrade: 'Grøntområder' };
 const INCLUDED_LABELS = { strom: 'Strøm', internett: 'Internett', oppvarming: 'Oppvarming', vann: 'Vann' };
@@ -66,6 +67,15 @@ function renderImages() {
   const rawImageUrls = Array.isArray(listing.images) && listing.images.length ? listing.images : (listing.image_url ? [listing.image_url] : []);
   const imageUrls = rawImageUrls.map((url) => safePublicMediaUrl(url, LISTING_IMAGES_BUCKET)).filter(Boolean);
   const mainImage = document.getElementById('listing-img');
+  if (listing._example) {
+    const art = document.createElement('div');
+    art.className = 'w-full h-72 md:h-96';
+    art.dataset.propertyArt = listing._art;
+    art.setAttribute('role', 'img');
+    art.setAttribute('aria-label', 'Illustrasjonsbilde av en oppdiktet bolig');
+    mainImage.replaceWith(art);
+    return;
+  }
   mainImage.src = imageUrls[0] || PLACEHOLDER_IMG;
   mainImage.alt = `Forsidebilde for ${listing.title}`;
   installImageFallback(mainImage, PLACEHOLDER_IMG);
@@ -100,6 +110,11 @@ function renderVideo() {
 }
 
 async function renderTrustBadges() {
+  if (listing._example) {
+    document.getElementById('owner-name').textContent = 'Eksempelbolig · ingen utleier';
+    document.getElementById('owner-initials').textContent = 'KM';
+    return;
+  }
   const [{ data: ownerProfile }, { data: stats }] = await Promise.all([
     supabase.from('profiles').select('full_name, avatar_url, is_verified').eq('id', listing.user_id).single(),
     supabase.rpc('get_response_stats', { target_user: listing.user_id }),
@@ -138,9 +153,10 @@ async function renderTrustBadges() {
 document.getElementById('share-listing').addEventListener('click', async () => {
   if (!listing) return;
   const shareUrl = new URL(`listing-detail.html?id=${encodeURIComponent(listing.id)}`, document.baseURI).toString();
+  const examplePrefix = listing._example ? 'Eksempelbolig – kan ikke leies. ' : '';
   const shareData = {
-    title: `${listing.title} – KollektivMatch`,
-    text: `${listing.title} i ${listing.city} · ${new Intl.NumberFormat('nb-NO').format(listing.price)} kr/mnd`,
+    title: `${examplePrefix}${listing.title} – KollektivMatch`,
+    text: `${examplePrefix}${listing.title} i ${listing.city} · ${new Intl.NumberFormat('nb-NO').format(listing.price)} kr/mnd`,
     url: shareUrl,
   };
   try {
@@ -157,6 +173,15 @@ document.getElementById('share-listing').addEventListener('click', async () => {
 
 function renderContact() {
   const chatLink = document.getElementById('chat-link');
+  if (listing._example) {
+    document.getElementById('contact-heading').textContent = 'Om dette eksemplet';
+    document.getElementById('contact-intro').textContent = 'Prøv andre preferanser i boligsøket og sammenlign resultatene.';
+    document.getElementById('share-listing').textContent = 'Del eksemplet';
+    chatLink.textContent = 'Tilbake til boligsøket';
+    chatLink.href = 'index.html#filter-form';
+    document.getElementById('contact-box').textContent = 'Dette er en oppdiktet bolig med illustrasjonsbilde. Den er laget for å prøve Smart Match og kan ikke leies. Det finnes ingen utleier å kontakte.';
+    return;
+  }
   if (viewer?.id === listing.user_id) {
     chatLink.textContent = 'Dette er din egen annonse';
     chatLink.href = 'dashboard.html';
@@ -199,6 +224,7 @@ function renderContact() {
 
 document.getElementById('report-form').addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!listing || listing._example) return;
   const button = document.getElementById('report-submit');
   button.disabled = true;
   const data = new FormData(event.target);
@@ -221,6 +247,12 @@ document.getElementById('report-form').addEventListener('submit', async (event) 
 });
 
 async function init() {
+  const example = getExampleListing(id);
+  if (example) {
+    listing = example;
+    renderListing();
+    return;
+  }
   if (!UUID_PATTERN.test(id || '')) {
     document.getElementById('loading').textContent = 'Ugyldig annonse-ID.';
     return;
@@ -251,13 +283,24 @@ async function init() {
       listing.contact_info = typeof contactInfo === 'string' ? contactInfo : null;
     }
   }
-  document.title = `${listing.title} – KollektivMatch`;
+  renderListing();
+}
+
+function renderListing() {
+  document.title = `${listing._example ? 'Eksempel: ' : ''}${listing.title} – KollektivMatch`;
   document.getElementById('page-description').content = `${listing.title} i ${listing.city}, ${new Intl.NumberFormat('nb-NO').format(listing.price)} kr per måned. Kontakt annonsøren på KollektivMatch.`;
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('listing-content').classList.remove('hidden');
   renderImages();
   renderVideo();
-  document.getElementById('listing-title').textContent = listing.title;
+  document.getElementById('listing-title').textContent = `${listing._example ? 'Eksempel: ' : ''}${listing.title}`;
+  if (listing._example) {
+    document.getElementById('page-description').content = 'Oppdiktet eksempelbolig for å prøve Smart Match. Kan ikke leies.';
+    const notice = document.createElement('p');
+    notice.className = 'example-notice mb-5';
+    notice.textContent = 'Eksempelbolig · oppdiktede opplysninger og illustrasjonsbilde. Boligen kan ikke leies.';
+    document.getElementById('listing-content').prepend(notice);
+  }
   if (listing.is_featured && listing.featured_until && new Date(listing.featured_until) > new Date()) {
     document.getElementById('listing-featured-badge').classList.remove('hidden');
   }
@@ -277,8 +320,10 @@ async function init() {
   renderPills('listing-amenities', listing.amenities, AMENITY_LABELS);
   renderPills('listing-rent-includes', listing.rent_includes, INCLUDED_LABELS);
   renderContact();
-  if (viewer && viewer.id !== listing.user_id) document.getElementById('report-section').classList.remove('hidden');
+  if (!listing._example && viewer && viewer.id !== listing.user_id) document.getElementById('report-section').classList.remove('hidden');
   renderTrustBadges().catch((trustError) => console.error('Kunne ikke hente tillitsmerker:', trustError.message));
 }
 
-init();
+init().catch(() => {
+  document.getElementById('loading').textContent = 'Kunne ikke laste annonsen. Prøv igjen senere.';
+});

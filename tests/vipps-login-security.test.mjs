@@ -45,15 +45,12 @@ assert.match(shared, /\.\.\.vippsLoginHeaders\(config, true\),[\s\S]{0,120}autho
   'Userinfo-kallet skal sende subscription key, MSN og system-headere');
 assert.doesNotMatch(shared, /phoneNumber|birthDate|\bnin\b|\baddress\b/);
 
-assert.match(start, /requireAllowedOrigin\(request\)/);
-assert.match(start, /requireUser\(request\)/);
-assert.match(start, /sha256Hex\(state\)/);
-assert.match(start, /gte\('created_at', fifteenMinutesAgo\)/, 'Verifiseringsforsøk skal begrenses');
-assert.match(callback, /eq\('status', 'pending'\)/, 'Callback skal kunne brukes bare én gang');
-assert.match(callback, /gt\('expires_at', now\)/, 'Utløpt state skal avvises');
-assert.match(callback, /complete_vipps_verification/);
-assert.match(callback, /cache-control': 'no-store'/);
-assert.doesNotMatch(callback, /console\.(?:log|error)\([^\n]*(?:access_token|id_token|codeVerifier|vipps_sub)/i);
+for (const endpoint of [start, callback]) {
+  assert.match(endpoint, /VERIFICATION_RETIRED/);
+  assert.match(endpoint, /status: 410/);
+  assert.match(endpoint, /'cache-control': 'no-store'/);
+  assert.doesNotMatch(endpoint, /serviceClient|complete_vipps_verification|exchangeVippsAuthorizationCode/);
+}
 
 assert.match(result, /rpc\('get_my_profile'\)/, 'Resultatsiden skal kontrollere serverlagret profilstatus');
 assert.match(result, /profile\?\.vipps_verified === true/);
@@ -74,4 +71,4 @@ const frontend = walk(root)
   .map((path) => readFileSync(path, 'utf8')).join('\n');
 assert.doesNotMatch(frontend, /VIPPS_LOGIN_CLIENT_SECRET|vipps_sub|code_verifier/);
 
-console.log('Avviklet Vipps-flyt og sikker legacy-kode: 43 statiske kontroller besto.');
+console.log('Avviklet Vipps-flyt: serverinnganger er stengt; historiske kryptografiske hjelpere er kontrollert.');

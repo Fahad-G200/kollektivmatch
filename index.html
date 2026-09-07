@@ -54,122 +54,19 @@
   </nav>
 </header>
 
-<!-- ============ HERO ============ -->
-<section class="relative overflow-hidden">
-  <!-- Signaturgrafikk: overlappende "rom" – samme formspråk som logoen -->
-  <svg class="hidden md:block absolute -top-16 -right-24 w-[440px] h-[440px] pointer-events-none" viewBox="0 0 520 520" fill="none" aria-hidden="true">
-    <rect x="70" y="60" width="150" height="150" rx="26" fill="#ECE7FF" transform="rotate(-8 145 135)"/>
-    <rect x="230" y="30" width="190" height="190" rx="30" fill="#DAD0FF" transform="rotate(6 325 125)"/>
-    <rect x="160" y="210" width="210" height="210" rx="34" fill="#BFABFF" transform="rotate(-4 265 315)"/>
-    <rect x="300" y="260" width="170" height="170" rx="28" fill="#6C4CE0" transform="rotate(9 385 345)"/>
-  </svg>
-
-  <div class="relative max-w-3xl mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-12 text-center">
-    <span class="inline-flex items-center gap-2 bg-white border border-line rounded-full pl-2.5 pr-4 py-1.5 text-xs font-semibold text-mist mb-6">
-      <span class="w-1.5 h-1.5 rounded-full bg-primary-600"></span>
-      Bygget for studenter og unge i Norge
-    </span>
-    <h1 class="font-display font-bold text-4xl md:text-6xl leading-[1.1] text-ink text-balance">
-      Finn et sted å bo –<br class="hidden md:block" />
-      og mennesker å <span class="text-primary-600">trives</span> med.
-    </h1>
-    <p class="mt-5 text-lg text-mist max-w-xl mx-auto">
-      Et varmt og oversiktlig sted for å finne rom, bli kjent med kollektivet og ta tryggere kontakt.
-    </p>
-    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-      <a href="#feed" class="w-full sm:w-auto px-7 py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-full shadow-lg shadow-primary-600/20 transition-all hover:-translate-y-0.5">
-        Se ledige rom
-      </a>
-      <a href="create-listing.html" class="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-primary-50 text-ink font-semibold rounded-full border border-line transition-all">
-        Legg ut annonse
-      </a>
-    </div>
+<!-- ============ SØK ============ -->
+<section class="search-intro max-w-6xl mx-auto px-5 md:px-8" aria-labelledby="home-title">
+  <div>
+    <p class="section-kicker">Ditt neste kapittel</p>
+    <h1 id="home-title" class="font-display font-bold text-4xl md:text-5xl text-ink">Et hjem som <span class="text-primary-600">passer deg.</span></h1>
+    <p class="text-mist mt-4 text-lg">Velg det som betyr noe for deg. Sammenlign boliger og se hvorfor de passer.</p>
   </div>
-</section>
-
-<!-- ============ TILLIT ============ -->
-<section class="max-w-5xl mx-auto px-5 md:px-8 pb-16">
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
-      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
-      </div>
-      <div>
-        <p class="font-semibold text-sm text-ink">Tryggere kontakt</p>
-        <p class="text-xs text-mist mt-0.5">Bekreftet e-post og rapportering gir bedre sikkerhet, men sjekk alltid annonsen selv</p>
-      </div>
-    </div>
-    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
-      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-      </div>
-      <div>
-        <p class="font-semibold text-sm text-ink">Ett sted, ikke tjue tråder</p>
-        <p class="text-xs text-mist mt-0.5">Søk og filtrer i stedet for å scrolle gjennom Facebook</p>
-      </div>
-    </div>
-    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
-      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M15.8 14.2c2.7.4 4.7 2.5 4.7 5.3"/></svg>
-      </div>
-      <div>
-        <p class="font-semibold text-sm text-ink">Gratis å søke bolig</p>
-        <p class="text-xs text-mist mt-0.5">Boligjegere betaler aldri noe for å bruke KollektivMatch</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ BOLIGTYPER ============ -->
-<section class="max-w-6xl mx-auto px-5 md:px-8 pb-16" aria-labelledby="property-types-title">
-  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6">
-    <div>
-      <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary-600">Finn din type hjem</p>
-      <h2 id="property-types-title" class="mt-2 font-display font-bold text-2xl md:text-3xl text-ink">Fra byliv til roligere omgivelser</h2>
-    </div>
-    <p class="max-w-md text-sm leading-relaxed text-mist">Utforsk boligtyper her, eller åpne et oppdatert søk med ekte annonser hos FINN.</p>
-  </div>
-
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-    <a href="https://www.finn.no/realestate/lettings/search.html?q=leilighet" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8CAB7] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive leiligheter hos FINN – åpnes i ny fane">
-      <div class="absolute inset-0 bg-cover bg-left transition-transform duration-500 group-hover:scale-[1.03]" style="background-image: url('assets/property-types-triptych.png'); background-size: 300% auto; background-position: left center;" role="img" aria-label="Lys skandinavisk leilighet"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
-      <div class="absolute inset-x-0 bottom-0 p-5 text-white">
-        <span class="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm">Leilighet</span>
-        <h3 class="mt-3 font-display text-xl font-bold">Nært byliv og studier</h3>
-        <p class="mt-1 text-sm leading-relaxed text-white/80">Moderne leiligheter og rom med hverdagen rett utenfor døren.</p>
-        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold">Se aktive annonser hos FINN <span aria-hidden="true">↗</span></span>
-      </div>
-    </a>
-
-    <a href="https://www.finn.no/realestate/lettings/search.html?q=enebolig" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8D2C6] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hus hos FINN – åpnes i ny fane">
-      <div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]" style="background-image: url('assets/property-types-triptych.png'); background-size: 300% auto; background-position: center center;" role="img" aria-label="Norsk hus med hage"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
-      <div class="absolute inset-x-0 bottom-0 p-5 text-white">
-        <span class="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm">Hus</span>
-        <h3 class="mt-3 font-display text-xl font-bold">Mer plass å dele</h3>
-        <p class="mt-1 text-sm leading-relaxed text-white/80">Sosiale hjem med større rom, hage og plass til fellesskap.</p>
-        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold">Se aktive annonser hos FINN <span aria-hidden="true">↗</span></span>
-      </div>
-    </a>
-
-    <a href="https://www.finn.no/realestate/lettings/search.html?q=hytte" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#6D786C] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hytter hos FINN – åpnes i ny fane">
-      <div class="absolute inset-0 bg-cover bg-right transition-transform duration-500 group-hover:scale-[1.03]" style="background-image: url('assets/property-types-triptych.png'); background-size: 300% auto; background-position: right center;" role="img" aria-label="Tømmerhytte ved vann og skog"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
-      <div class="absolute inset-x-0 bottom-0 p-5 text-white">
-        <span class="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm">Hytte</span>
-        <h3 class="mt-3 font-display text-xl font-bold">Ro nær naturen</h3>
-        <p class="mt-1 text-sm leading-relaxed text-white/80">Et lunere alternativ for lengre opphold utenfor den travleste byen.</p>
-        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold">Se aktive annonser hos FINN <span aria-hidden="true">↗</span></span>
-      </div>
-    </a>
-  </div>
-  <p class="mt-3 text-xs text-mist">Illustrasjonsbilder fra KollektivMatch. Eksterne treff, priser og kontakt håndteres hos FINN.</p>
+  <a href="create-listing.html" class="intro-action">Har du et ledig rom? <span aria-hidden="true">↗</span></a>
 </section>
 
 <!-- ============ FILTER ============ -->
 <section class="max-w-6xl mx-auto px-5 md:px-8">
-  <form id="filter-form" class="bg-white rounded-2xl border border-line p-4 md:p-5 space-y-4">
+  <form id="filter-form" class="search-panel bg-white rounded-2xl border border-line p-4 md:p-5 space-y-4">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:items-end">
       <div>
         <label for="f-city" class="text-xs font-semibold text-mist mb-1 block">By / område</label>
@@ -247,6 +144,7 @@
           <option value="enebolig">Enebolig</option>
           <option value="rekkehus">Rekkehus</option>
           <option value="studentbolig">Studentbolig</option>
+          <option value="hytte">Hytte</option>
           <option value="annet">Annet</option>
         </select>
       </div>
@@ -257,6 +155,7 @@
           <option value="">Alle</option>
           <option value="student">Student</option>
           <option value="jobb">I jobb</option>
+
           <option value="annet">Annet</option>
         </select>
       </div>
@@ -294,7 +193,7 @@
       <button type="button" id="reset-filters" class="px-4 py-2.5 text-sm font-semibold text-mist hover:text-ink rounded-xl transition-colors">Nullstill filtre</button>
     </div>
     <div id="active-filters" class="hidden flex flex-wrap gap-2" aria-live="polite"></div>
-    <p class="text-[11px] leading-relaxed text-mist">Matchprosenten er en veiledende rangering basert på filtrene i dette søket, øvrige lagrede preferanser og tilgjengelige annonsedata. Valgte filtre overstyrer samme valg i profilen. Prosenten er ikke en garanti eller en automatisk beslutning.</p>
+    <p class="text-sm leading-relaxed text-mist">Velg minst to preferanser, eller en skole, for å se matchprosent. Søket overstyrer tilsvarende lagrede preferanser. Åpne «Hvorfor?» på boligen for å se grunnlaget. Prosenten er veiledende.</p>
     <p id="advanced-filters-unavailable" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">Avanserte bolig- og matchfiltre blir tilgjengelige når databasemigreringen er installert. Sted, pris, dato og sortering virker fortsatt.</p>
   </form>
 </section>
@@ -308,16 +207,104 @@
     <div id="featured-listings-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
   </section>
   <div class="flex flex-wrap items-baseline justify-between gap-2 mb-6">
-    <h2 class="font-display font-bold text-2xl md:text-3xl text-ink">Ledige rom akkurat nå</h2>
+    <h2 class="font-display font-bold text-2xl md:text-3xl text-ink">Finn ditt neste hjem</h2>
     <span id="results-summary" class="text-sm text-mist" aria-live="polite">Laster annonser …</span>
   </div>
   <div id="listings-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-    <!-- Fylles av js/feed.js -->
+    <!-- Boligresultater -->
   </div>
+  <section id="example-results" class="hidden mt-6" aria-labelledby="example-results-title">
+    <div class="example-notice">
+      <div><h2 id="example-results-title" class="font-bold">Prøv Smart Match med eksempelboliger</h2>
+      <p>Oppdiktede boliger med illustrasjonsbilder. Du kan teste preferanser og match, men boligene kan ikke leies.</p></div>
+      <span class="example-count" id="example-count"></span>
+    </div>
+    <div id="example-listings-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"></div>
+  </section>
   <div class="text-center mt-8">
     <button id="load-more-btn" type="button" class="hidden px-6 py-3 bg-white border border-line text-primary-700 font-semibold rounded-xl hover:bg-primary-50 transition-colors">Vis flere</button>
   </div>
 </main>
+
+<!-- ============ BOLIGTYPER ============ -->
+<section class="max-w-6xl mx-auto px-5 md:px-8 pb-16" aria-labelledby="property-types-title">
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary-600">Finn din type hjem</p>
+      <h2 id="property-types-title" class="mt-2 font-display font-bold text-2xl md:text-3xl text-ink">Fra byliv til roligere omgivelser</h2>
+    </div>
+    <p class="max-w-md text-sm leading-relaxed text-mist">Utforsk boligtyper her, eller åpne et oppdatert søk med ekte annonser hos FINN.</p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <a href="https://www.finn.no/realestate/lettings/search.html?q=leilighet" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8CAB7] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive leiligheter hos FINN – åpnes i ny fane">
+      <div class="absolute inset-0 bg-cover bg-left transition-transform duration-500 group-hover:scale-[1.03]" data-property-art="apartment" role="img" aria-label="Lys skandinavisk leilighet"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
+      <div class="absolute inset-x-0 bottom-0 p-5 text-white">
+        <span class="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm">Leilighet</span>
+        <h3 class="mt-3 font-display text-xl font-bold">Nært byliv og studier</h3>
+        <p class="mt-1 text-sm leading-relaxed text-white/80">Moderne leiligheter og rom med hverdagen rett utenfor døren.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold">Se aktive annonser hos FINN <span aria-hidden="true">↗</span></span>
+      </div>
+    </a>
+
+    <a href="https://www.finn.no/realestate/lettings/search.html?q=enebolig" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8D2C6] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hus hos FINN – åpnes i ny fane">
+      <div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]" data-property-art="house" role="img" aria-label="Norsk hus med hage"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
+      <div class="absolute inset-x-0 bottom-0 p-5 text-white">
+        <span class="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm">Hus</span>
+        <h3 class="mt-3 font-display text-xl font-bold">Mer plass å dele</h3>
+        <p class="mt-1 text-sm leading-relaxed text-white/80">Sosiale hjem med større rom, hage og plass til fellesskap.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold">Se aktive annonser hos FINN <span aria-hidden="true">↗</span></span>
+      </div>
+    </a>
+
+    <a href="https://www.finn.no/realestate/lettings/search.html?q=hytte" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#6D786C] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hytter hos FINN – åpnes i ny fane">
+      <div class="absolute inset-0 bg-cover bg-right transition-transform duration-500 group-hover:scale-[1.03]" data-property-art="cabin" role="img" aria-label="Tømmerhytte ved vann og skog"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
+      <div class="absolute inset-x-0 bottom-0 p-5 text-white">
+        <span class="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm">Hytte</span>
+        <h3 class="mt-3 font-display text-xl font-bold">Ro nær naturen</h3>
+        <p class="mt-1 text-sm leading-relaxed text-white/80">Et lunere alternativ for lengre opphold utenfor den travleste byen.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold">Se aktive annonser hos FINN <span aria-hidden="true">↗</span></span>
+      </div>
+    </a>
+  </div>
+  <p class="mt-3 text-xs text-mist">Illustrasjonsbilder fra KollektivMatch. Eksterne treff, priser og kontakt håndteres hos FINN.</p>
+</section>
+
+<!-- ============ TILLIT ============ -->
+<section class="max-w-5xl mx-auto px-5 md:px-8 pb-16">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
+      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-ink">Tryggere kontakt</p>
+        <p class="text-xs text-mist mt-0.5">Bekreftet e-post og rapportering gir bedre sikkerhet, men sjekk alltid annonsen selv</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
+      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-ink">Ett sted, ikke tjue tråder</p>
+        <p class="text-xs text-mist mt-0.5">Søk og filtrer i stedet for å scrolle gjennom Facebook</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-5 flex items-start gap-3.5 border border-line">
+      <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 shrink-0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M15.8 14.2c2.7.4 4.7 2.5 4.7 5.3"/></svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-ink">Gratis å søke bolig</p>
+        <p class="text-xs text-mist mt-0.5">Boligjegere betaler aldri noe for å bruke KollektivMatch</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ============ CTA-BANNER ============ -->
 <section class="max-w-6xl mx-auto px-5 md:px-8 pb-20">
@@ -414,6 +401,7 @@
           <option value="">Sysselsetting (valgfritt)</option>
           <option value="student">Student</option>
           <option value="jobb">I jobb</option>
+
           <option value="annet">Annet</option>
         </select>
         <label for="register-income" class="sr-only">Inntektsstatus</label>
@@ -422,6 +410,7 @@
           <option value="fast">Fast inntekt</option>
           <option value="deltid">Deltidsjobb</option>
           <option value="stipend">Stipend / lån</option>
+
           <option value="annet">Annet</option>
         </select>
       </div>

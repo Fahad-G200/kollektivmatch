@@ -20,25 +20,21 @@ function normalizeLocation(value) {
     .trim();
 }
 
-function locationParts(value) {
-  const rawParts = String(value || '').split(/[,/]/);
-  const normalized = rawParts.map(normalizeLocation).filter(Boolean);
-  const full = normalizeLocation(value);
-  return [...new Set([full, ...normalized].filter(Boolean))];
+export function locationSearchParts(value) {
+  return [...new Set(String(value || '').split(/[,/]/).map(part => part.trim()).filter(Boolean))];
+}
+
+export function matchesLocation(wantedLocation, listingLocations) {
+  const wantedParts = locationSearchParts(wantedLocation).map(normalizeLocation).filter(Boolean);
+  const availableParts = listingLocations.map(normalizeLocation).filter(Boolean);
+  if (!wantedParts.length || !availableParts.length) return false;
+  return wantedParts.every(wanted => availableParts.some(available =>
+    wanted === available || ` ${available} `.includes(` ${wanted} `)
+  ));
 }
 
 function locationMatchRatio(wantedLocation, listingLocations) {
-  const wantedParts = locationParts(wantedLocation);
-  const availableParts = listingLocations.flatMap(locationParts);
-  if (!wantedParts.length || !availableParts.length) return 0;
-
-  return wantedParts.some((wanted) => availableParts.some((available) => {
-    if (wanted === available) return true;
-    const shorterLength = Math.min(wanted.length, available.length);
-    if (shorterLength >= 3 && (wanted.includes(available) || available.includes(wanted))) return true;
-    const wantedTokens = new Set(wanted.split(' ').filter((token) => token.length >= 2));
-    return available.split(' ').some((token) => wantedTokens.has(token));
-  })) ? 1 : 0;
+  return matchesLocation(wantedLocation, listingLocations) ? 1 : 0;
 }
 
 /**
@@ -59,9 +55,13 @@ export function buildMatchPreferences(profile, filters = {}) {
   const preferences = { ...(profile || {}) };
   const maxPrice = Number(filters.maxPrice);
   const maxTransitMinutes = Number(filters.maxTransitMinutes);
+  const lifestyleTags = selectedValues(filters.lifestyleTags);
+  const amenityTags = selectedValues(filters.amenities);
+  const amenityValues = new Set(['matbutikk', 'kollektivtransport', 'treningssenter', 'grontomrade']);
+  const savedTags = selectedValues(preferences.priority_tags);
   const filterTags = selectedValues([
-    ...selectedValues(filters.amenities),
-    ...selectedValues(filters.lifestyleTags),
+    ...(amenityTags.length ? amenityTags : savedTags.filter(tag => amenityValues.has(tag))),
+    ...(lifestyleTags.length ? lifestyleTags : savedTags.filter(tag => !amenityValues.has(tag))),
   ]);
 
   if (String(filters.maxPrice ?? '').trim() && Number.isFinite(maxPrice) && maxPrice > 0) {
@@ -123,15 +123,19 @@ export function computeMatch(listing, profile, context = {}) {
     .map((value) => String(value || '').trim())
     .filter(Boolean);
   if (wantedLocation && listingLocations.length) {
-    addCriterion(state, 25, locationMatchRatio(wantedLocation, listingLocations), 'Område', 'Riktig område');
+    const ratio = locationMatchRatio(wantedLocation, listingLocations);
+    addCriterion(state, 25, ratio, 'Område', ratio === 1 ? 'Riktig område' : 'Utenfor ønsket område');
     state.criteria += 1;
   }
 
-  if (Number(preferences.monthly_budget_max) > 0 && Number(listing.price) > 0) {
+  if (Number.isFinite(Number(preferences.monthly_budget_max)) && Number(preferences.monthly_budget_max) > 0
+      && Number.isFinite(Number(listing.price)) && Number(listing.price) > 0) {
     const budget = Number(preferences.monthly_budget_max);
     const price = Number(listing.price);
     const ratio = price <= budget ? 1 : Math.max(0, 1 - ((price - budget) / budget) / 0.5);
-    addCriterion(state, 35, ratio, 'Budsjett', 'Innenfor budsjett');
+    addCriterion(state, 35, ratio, 'Budsjett', price <= budget
+      ? 'Innenfor budsjett'
+      : `${(price - budget).toLocaleString('nb-NO')} kr over månedsbudsjettet`);
     state.criteria += 1;
   }
 
@@ -139,22 +143,26 @@ export function computeMatch(listing, profile, context = {}) {
     ? preferences.preferred_property_types.filter(Boolean)
     : [];
   if (preferredTypes.length && listing.property_type) {
-    addCriterion(state, 25, preferredTypes.includes(listing.property_type) ? 1 : 0, 'Boligtype', 'Riktig boligtype');
+    const matches = preferredTypes.includes(listing.property_type);
+    addCriterion(state, 25, matches ? 1 : 0, 'Boligtype', matches ? 'Riktig boligtype' : 'En annen boligtype enn du ønsker');
     state.criteria += 1;
   }
 
-  if (preferences.occupation) {
-    const accepted = Array.isArray(listing.preferred_occupations) ? listing.preferred_occupations : [];
-    addCriterion(state, 15, !accepted.length || accepted.includes(preferences.occupation) ? 1 : 0, 'Hverdag', 'Passer din hverdag');
+  if (preferences.occupation && Array.isArray(listing.preferred_occupations)) {
+    const accepted = listing.preferred_occupations;
+    const matches = !accepted.length || accepted.includes(preferences.occupation);
+    addCriterion(state, 15, matches ? 1 : 0, 'Hverdag', matches ? 'Passer din hverdag' : 'Annonsøren ønsker en annen hverdag');
     state.criteria += 1;
   }
 
   if (preferences.desired_move_in_date && (listing.move_in_date || listing.move_in_date === null)) {
     const desired = new Date(`${preferences.desired_move_in_date}T00:00:00`);
     const available = listing.move_in_date ? new Date(`${listing.move_in_date}T00:00:00`) : null;
-    const ratio = !available || available <= desired ? 1 : 0;
-    addCriterion(state, 15, ratio, 'Innflytting', 'Passer innflyttingen');
-    state.criteria += 1;
+    if (Number.isFinite(desired.getTime()) && (!available || Number.isFinite(available.getTime()))) {
+      const ratio = !available || available <= desired ? 1 : 0;
+      addCriterion(state, 15, ratio, 'Innflytting', ratio === 1 ? 'Passer innflyttingen' : 'Ledig senere enn ønsket innflytting');
+      state.criteria += 1;
+    }
   }
 
   const hasTransitPreference = String(preferences.max_transit_minutes ?? '').trim() !== '';
@@ -167,7 +175,9 @@ export function computeMatch(listing, profile, context = {}) {
     const ratio = transitMinutes <= maxTransitMinutes
       ? 1
       : Math.max(0, 1 - ((transitMinutes - maxTransitMinutes) / Math.max(maxTransitMinutes, 5)));
-    addCriterion(state, 20, ratio, 'Kollektivtransport', 'Kort vei til kollektivtransport');
+    addCriterion(state, 20, ratio, 'Kollektivtransport', transitMinutes <= maxTransitMinutes
+      ? 'Kort vei til kollektivtransport'
+      : `${transitMinutes} min til kollektivtransport · du ønsker maks ${maxTransitMinutes} min`);
     state.criteria += 1;
   }
 
@@ -206,7 +216,7 @@ export function computeMatch(listing, profile, context = {}) {
   }
 
   const minimumCriteria = schoolDistanceKm !== null ? 1 : 2;
-  if (state.criteria < minimumCriteria || state.weight < (minimumCriteria === 1 ? 20 : 35)) return null;
+  if (state.criteria < minimumCriteria) return null;
 
   const confidence = state.criteria >= 5 ? 'high' : state.criteria >= 3 ? 'medium' : 'limited';
 

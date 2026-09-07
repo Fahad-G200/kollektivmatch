@@ -1,6 +1,7 @@
 import { supabase } from './supabase-config.js';
 import { showToast } from './ui.js';
-import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm } from './match.js?v=20260827-1';
+import { selectExampleListings } from './example-listings.js';
+import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm, locationSearchParts } from './match.js?v=20260827-1';
 import { formatDistance } from './location-utils.js?v=20260825-1';
 import {
   LISTING_IMAGES_BUCKET,
@@ -12,6 +13,8 @@ import {
 const grid = document.getElementById('listings-grid');
 const featuredSection = document.getElementById('featured-results');
 const featuredGrid = document.getElementById('featured-listings-grid');
+const exampleSection = document.getElementById('example-results');
+const exampleGrid = document.getElementById('example-listings-grid');
 const loadMoreButton = document.getElementById('load-more-btn');
 const PLACEHOLDER_IMG = 'assets/placeholder.svg';
 const PAGE_SIZE = 12;
@@ -23,7 +26,7 @@ let featuredListingIds = [];
 
 const PROPERTY_LABELS = {
   leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig',
-  rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', annet: 'Annet',
+  rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', hytte: 'Hytte', annet: 'Annet',
 };
 
 const PIN_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-7.58 7-12A7 7 0 0 0 5 10c0 4.42 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>`;
@@ -112,7 +115,7 @@ function hasActiveFilters(filters = {}) {
 function renderEmptyState(filters) {
   const filtered = hasActiveFilters(filters);
   grid.innerHTML = `
-    <div class="col-span-full flex flex-col items-center text-center py-16 text-mist">
+    <div class="col-span-full flex flex-col items-center text-center py-6 text-mist">
       ${SEARCH_ICON}
       <p class="mt-4 font-medium text-ink">${filtered ? 'Fant ingen rom som matcher søket' : 'Ingen aktive annonser akkurat nå'}</p>
       <p class="text-sm mt-1 max-w-md">${filtered
@@ -174,31 +177,33 @@ function cardTemplate(listing) {
   const matchBreakdown = matchBreakdownTemplate(listing._match);
 
   return `
-    <article class="bg-white rounded-2xl overflow-hidden border border-line hover:shadow-lg hover:shadow-ink/5 transition-all relative">
-      ${featuredBadge}${matchBadge}
+    <article class="listing-card bg-white rounded-2xl overflow-hidden border border-line hover:shadow-lg hover:shadow-ink/5 transition-all relative">
+      ${listing._example ? '<span class="example-badge">Eksempel</span>' : featuredBadge}${matchBadge}
       <a href="listing-detail.html?id=${encodeURIComponent(listing.id)}" class="group block">
         <div class="h-44 overflow-hidden bg-primary-50">
-          <img src="${image}" alt="${title}" loading="lazy" class="listing-card-image w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300" />
+          ${listing._example
+            ? `<div class="w-full h-full" data-property-art="${escapeHtml(listing._art)}" role="img" aria-label="Illustrasjonsbilde av en eksempelbolig"></div>`
+            : `<img src="${image}" alt="${title}" loading="lazy" class="listing-card-image w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300" />`}
         </div>
         <div class="p-4">
-          <div class="flex items-start justify-between gap-2"><h3 class="font-semibold text-ink truncate">${title}</h3>${propertyType}</div>
-          <p class="text-primary-600 font-bold mt-1">${formatPrice(listing.price)}</p>
+          <div class="flex items-start justify-between gap-2"><h3 class="listing-card-title text-ink">${title}</h3>${propertyType}</div>
+          <p class="listing-card-price text-primary-600 font-bold mt-1">${formatPrice(listing.price)}</p>
           <div class="flex items-center gap-1.5 mt-3 text-sm text-mist">${PIN_ICON}<span>${area}${city}</span></div>
           <p class="text-xs text-mist/80 mt-1">Innflytting: ${formatMoveIn(listing.move_in_date)}</p>
           ${schoolDistance}
           ${explanation}
           ${matchBasis}
-          <div class="listing-owner-row mt-4 pt-3 border-t border-line/80 flex items-center gap-2.5">
+          ${listing._example ? '<p class="mt-4 pt-3 border-t border-line text-sm text-mist">Oppdiktet bolig · kan ikke leies</p>' : `<div class="listing-owner-row mt-4 pt-3 border-t border-line/80 flex items-center gap-2.5">
             <span class="listing-owner-avatar">${ownerPhoto}</span>
             <span class="min-w-0 text-xs font-semibold text-ink truncate">${ownerName}</span>
             ${verified}
-          </div>
+          </div>`}
         </div>
       </a>
       ${matchBreakdown}
       <div class="px-4 pb-4 flex items-center justify-between gap-3">
-        <span>${preferencePrompt}</span>
-        <button type="button" data-share-listing="${escapeHtml(listing.id)}" data-share-title="${title}" data-share-city="${city}" data-share-price="${escapeHtml(listing.price)}" class="listing-share-button" aria-label="Del ${title}">
+        <span>${listing._example && !listing._match ? '<a href="#filter-form" class="text-sm text-primary-700 font-semibold">Velg preferanser for match</a>' : preferencePrompt}</span>
+        <button type="button" data-share-example="${listing._example === true}" data-share-listing="${escapeHtml(listing.id)}" data-share-title="${title}" data-share-city="${city}" data-share-price="${escapeHtml(listing.price)}" class="listing-share-button" aria-label="Del ${title}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
           Del
         </button>
@@ -207,14 +212,24 @@ function cardTemplate(listing) {
   `;
 }
 
+function renderExamples(filters, preferences, school) {
+  if (!exampleSection || !exampleGrid) return;
+  const examples = selectExampleListings(filters, preferences, school);
+  exampleSection.classList.remove('hidden');
+  document.getElementById('example-count').textContent = `${examples.length} ${examples.length === 1 ? 'eksempel' : 'eksempler'}`;
+  exampleGrid.innerHTML = examples.length ? examples.map(cardTemplate).join('')
+    : '<p class="col-span-full py-4 text-sm text-mist">Ingen eksempelboliger passer alle filtrene. Prøv et større budsjett eller færre filtre.</p>';
+}
+
 async function shareListing(button) {
   const shareUrl = new URL(`listing-detail.html?id=${encodeURIComponent(button.dataset.shareListing)}`, document.baseURI).toString();
   const title = button.dataset.shareTitle || 'Boligannonse';
+  const examplePrefix = button.dataset.shareExample === 'true' ? 'Eksempelbolig – kan ikke leies. ' : '';
   const city = button.dataset.shareCity || '';
   const price = Number(button.dataset.sharePrice);
   const shareData = {
-    title: `${title} – KollektivMatch`,
-    text: `${title}${city ? ` i ${city}` : ''}${Number.isFinite(price) ? ` · ${new Intl.NumberFormat('nb-NO').format(price)} kr/mnd` : ''}`,
+    title: `${examplePrefix}${title} – KollektivMatch`,
+    text: `${examplePrefix}${title}${city ? ` i ${city}` : ''}${Number.isFinite(price) ? ` · ${new Intl.NumberFormat('nb-NO').format(price)} kr/mnd` : ''}`,
     url: shareUrl,
   };
   try {
@@ -238,6 +253,7 @@ function installShareHandler(root) {
 
 installShareHandler(grid);
 installShareHandler(featuredGrid);
+installShareHandler(exampleGrid);
 
 function installOwnerAvatarFallbacks(root) {
   root.querySelectorAll('.listing-owner-photo').forEach((image) => {
@@ -268,8 +284,10 @@ function sanitizeSearchTerm(value) {
 }
 
 function applyFilters(query, filters) {
-  const locationTerm = sanitizeSearchTerm(primaryLocationSearchTerm(filters.city));
-  if (locationTerm) query = query.or(`city.ilike.%${locationTerm}%,area.ilike.%${locationTerm}%`);
+  for (const part of locationSearchParts(filters.city)) {
+    const locationTerm = sanitizeSearchTerm(part);
+    if (locationTerm) query = query.or(`city.ilike.%${locationTerm}%,area.ilike.%${locationTerm}%`);
+  }
   if (filters.maxPrice) query = query.lte('price', Number(filters.maxPrice));
   if (filters.moveInDate) query = query.or(`move_in_date.is.null,move_in_date.lte.${filters.moveInDate}`);
   if (filters.propertyType) query = query.eq('property_type', filters.propertyType);
@@ -312,15 +330,23 @@ function applyLegacyFilters(query, filters) {
 
 async function fetchPage(filters, page, append) {
   const sequence = ++requestSequence;
+  let pageFeaturedIds = append ? [...featuredListingIds] : [];
   const school = filters.schoolName && Number.isFinite(Number(filters.schoolLat)) && Number.isFinite(Number(filters.schoolLon))
     ? { name: filters.schoolName, latitude: Number(filters.schoolLat), longitude: Number(filters.schoolLon) }
     : null;
   let propertyTypeUnavailable = false;
-  if (!append) renderSkeletons();
+  if (!append) {
+    renderSkeletons();
+    renderExamples(filters, buildMatchPreferences(null, filters), school);
+    featuredSection.classList.add('hidden');
+    featuredGrid.innerHTML = '';
+  }
   loadMoreButton.disabled = true;
   loadMoreButton.textContent = append ? 'Laster...' : 'Vis flere';
 
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  try { ({ data: { user } } = await supabase.auth.getUser()); }
+  catch { /* Browsing and local examples remain available without an auth response. */ }
   let profile = null;
   if (user) {
     const { data: profileData } = await supabase.rpc('get_my_profile');
@@ -328,6 +354,7 @@ async function fetchPage(filters, page, append) {
   }
   if (sequence !== requestSequence) return { stale: true };
   const matchPreferences = buildMatchPreferences(profile, filters);
+  if (!append) renderExamples(filters, matchPreferences, school);
   const profileComplete = hasEnoughPreferences(profile);
   const matchPreferencesComplete = hasEnoughPreferences(matchPreferences);
   const bestMatchSorting = !filters.sortBy || filters.sortBy === 'best_match';
@@ -343,19 +370,20 @@ async function fetchPage(filters, page, append) {
       .eq('is_featured', true).gt('featured_until', new Date().toISOString());
     featuredQuery = applyFilters(featuredQuery, filters).order('featured_until', { ascending: false }).limit(6);
     const featuredResult = await featuredQuery;
+    if (sequence !== requestSequence) return { stale: true };
     if (!featuredResult.error) {
       featuredData = featuredResult.data || [];
-      featuredListingIds = featuredData.map((listing) => listing.id);
+      pageFeaturedIds = featuredData.map((listing) => listing.id);
     } else {
-      featuredListingIds = [];
+      pageFeaturedIds = [];
     }
   } else if (!append) {
-    featuredListingIds = [];
+    pageFeaturedIds = [];
   }
 
   let query = supabase.from('listings').select(columns, { count: 'exact' }).eq('status', 'active');
   query = applyFilters(query, filters);
-  if (featuredListingIds.length) query = query.not('id', 'in', `(${featuredListingIds.join(',')})`);
+  if (pageFeaturedIds.length) query = query.not('id', 'in', `(${pageFeaturedIds.join(',')})`);
   query = applySorting(query, filters.sortBy);
   query = rankAllResults
     ? query.range(0, MAX_CLIENT_RANKED_RESULTS - 1)
@@ -372,7 +400,7 @@ async function fetchPage(filters, page, append) {
       : legacyQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
     ({ data, error, count } = await legacyQuery);
     featuredData = [];
-    featuredListingIds = [];
+    pageFeaturedIds = [];
   }
   if (sequence !== requestSequence) return { stale: true };
 
@@ -405,8 +433,10 @@ async function fetchPage(filters, page, append) {
 
   await attachOwnerProfiles([...(data || []), ...featuredData]);
   if (sequence !== requestSequence) return { stale: true };
+  featuredListingIds = pageFeaturedIds;
 
   if (!append) {
+    exampleSection?.classList.toggle('hidden', data.length > 0 || featuredData.length > 0);
     featuredSection.classList.toggle('hidden', featuredData.length === 0);
     featuredGrid.innerHTML = featuredData.map(cardTemplate).join('');
     featuredGrid.querySelectorAll('.listing-card-image').forEach((image) => installImageFallback(image, PLACEHOLDER_IMG));
@@ -426,7 +456,7 @@ async function fetchPage(filters, page, append) {
   grid.querySelectorAll('.listing-card-image').forEach((image) => installImageFallback(image, PLACEHOLDER_IMG));
   installOwnerAvatarFallbacks(grid);
   const resultSummary = document.getElementById('results-summary');
-  const totalCount = (count || 0) + featuredListingIds.length;
+  const totalCount = (count || 0) + pageFeaturedIds.length;
   const rankingIsCapped = rankAllResults && (count || 0) > MAX_CLIENT_RANKED_RESULTS;
   if (resultSummary) {
     resultSummary.textContent = rankingIsCapped
