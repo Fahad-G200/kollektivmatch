@@ -9,8 +9,9 @@ const createListing = await readFile(new URL('../create-listing.js', import.meta
 const privacy = await readFile(new URL('../privacy.html', import.meta.url), 'utf8');
 
 test('authenticated users cannot bulk-select listing contact_info', () => {
-  assert.match(migration, /revoke select on table public\.listings from authenticated/i);
-  const publicGrant = migration.match(/grant select \(([\s\S]*?)\) on public\.listings to authenticated/i)?.[1] || '';
+  assert.match(migration, /revoke select on table public\.listings from public, anon, authenticated/i);
+  assert.match(migration, /revoke select \(contact_info\) on table public\.listings from public, anon, authenticated/i);
+  const publicGrant = migration.match(/grant select \(([\s\S]*?)\) on public\.listings to anon, authenticated/i)?.[1] || '';
   assert.ok(publicGrant);
   assert.doesNotMatch(publicGrant, /\bcontact_info\b/i);
 });

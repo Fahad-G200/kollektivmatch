@@ -10,7 +10,7 @@ nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse seksten migreringene i rekkefølge:
+skal du kjøre disse sytten migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -44,7 +44,9 @@ skal du kjøre disse seksten migreringene i rekkefølge:
 
 `migrations/2026-09-07_cabin_property_type.sql`
 
-Migreringen er ikke-destruktiv og legger til felter, validering, funksjoner,
+`migrations/2026-09-08_security_definer_execute_grants.sql`
+
+Migreringene er ikke-destruktive og legger til felter, validering, funksjoner,
 rettigheter og policyer uten å slette eksisterende data. `schema.sql` er nå kun
 en sikker veiviser. Ikke kjør `schema_fresh_install_DELETES_ALL_DATA.sql` på en
 eksisterende database; den filen inneholder med hensikt `DROP TABLE` for en helt
@@ -52,7 +54,7 @@ ny installasjon. Ved en tom førstegangsinstallasjon kjøres fresh-install-filen
 først, deretter de daterte migreringene i rekkefølgen over.
 
 Frontend kan midlertidig publisere mot det gamle skjemaet med forsidebildet,
-men migreringen må kjøres for bildegalleri, nye boligfelt, Smart Match,
+men migreringene må kjøres for bildegalleri, nye boligfelt, Smart Match,
 kontosletting, dataeksport, rapportering og den sikrede meldingsflyten.
 
 > **Ikke publiser som ferdig tjeneste ennå:** Fyll ut alle hakeparenteser i
@@ -95,7 +97,8 @@ CDN-kjøring brukes ikke.
    `migrations/2026-08-31_contact_privacy_hardening.sql` og
    `migrations/2026-09-01_reporting_hardening.sql`,
    `migrations/2026-09-07_public_listing_access.sql` og
-   `migrations/2026-09-07_cabin_property_type.sql`. Alle er
+   `migrations/2026-09-07_cabin_property_type.sql` og
+   `migrations/2026-09-08_security_definer_execute_grants.sql`. Alle er
    additive og skal ikke slette eksisterende brukere eller annonser.
 3. Åpne **Authentication → URL Configuration**.
 4. Sett **Site URL** til den faktiske rotadressen. Lokalt kan dette være

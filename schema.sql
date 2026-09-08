@@ -15,6 +15,9 @@
 --   migrations/2026-08-28_payment_and_storage_followup.sql
 --   migrations/2026-08-31_contact_privacy_hardening.sql
 --   migrations/2026-09-01_reporting_hardening.sql
+--   migrations/2026-09-07_public_listing_access.sql
+--   migrations/2026-09-07_cabin_property_type.sql
+--   migrations/2026-09-08_security_definer_execute_grants.sql
 --
 -- En full førstegangsinstallasjon som SLETTER ALLE DATA ligger bevisst i:
 --   schema_fresh_install_DELETES_ALL_DATA.sql

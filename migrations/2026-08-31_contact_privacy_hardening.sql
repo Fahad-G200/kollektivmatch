@@ -4,10 +4,12 @@
 
 begin;
 
--- Innloggede brukere skal ikke kunne hente kontakt_info i bulk gjennom
--- listings-tabellen. De beholder samme offentlige annonsefelt som utloggede
--- besøkende. Eieren får egne komplette annonser gjennom get_my_listings().
-revoke select on table public.listings from authenticated;
+-- Ingen nettleserrolle skal kunne hente contact_info i bulk gjennom
+-- listings-tabellen. Nullstill både tabell- og kolonnenivaa-rettigheter slik
+-- at eldre eksplisitte grants ikke overlever. Eieren får egne komplette
+-- annonser gjennom get_my_listings().
+revoke select on table public.listings from public, anon, authenticated;
+revoke select (contact_info) on table public.listings from public, anon, authenticated;
 
 grant select (
   id, user_id, title, description, price, city, area, location_lat,
@@ -17,7 +19,7 @@ grant select (
   gym_nearby, green_areas_nearby, property_type, room_size_m2,
   deposit_amount, furnished, rent_includes, status, is_featured,
   featured_until, created_at, updated_at
-) on public.listings to authenticated;
+) on public.listings to anon, authenticated;
 
 create or replace function public.get_my_listings()
 returns setof public.listings
