@@ -9,9 +9,9 @@ import {
   rememberReturnTo,
 } from './auth.js';
 import { ENABLE_GOOGLE_AUTH } from './supabase-config.js';
-import { loadListings, loadMoreListings, populateCitySuggestions } from './feed.js?v=20260827-1';
+import { loadListings, loadMoreListings, populateCitySuggestions } from './feed.js?v=20260908-1';
 import { openModal, closeModal, showToast } from './ui.js';
-import { searchSchools } from './location-utils.js?v=20260827-2';
+import { searchSchools } from './location-utils.js?v=20260908-1';
 
 const authButtons = document.getElementById('auth-buttons');
 const userMenu = document.getElementById('user-menu');
