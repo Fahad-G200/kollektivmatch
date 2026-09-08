@@ -120,8 +120,9 @@ Kortnummer, CVC og bankpassord går ikke gjennom KollektivMatch-koden.
   filstier, privat telefon, bankinformasjon eller serverhemmeligheter.
 - Vilkår og personvern inneholder fortsatt `[JURIDISK NAVN]`, `[ORG.NR.]` og
   kontaktplassholdere. Dette blokkerer offentlig lansering.
-- Sites-adressen inneholder arbeidsområdeetiketten `fah-08`. Bruk et nøytralt
-  egendefinert domene dersom den kan kobles til eieren.
+- Den tidligere Sites-adressen inneholdt en personlig arbeidsområdeetikett.
+  Produksjonssiden bruker nå den nøytrale gratisadressen
+  `https://kollektivmatch.pages.dev`.
 - En lovlig kommersiell tjeneste kan ikke love anonymitet overfor Stripe,
   Vipps, bank, hosting, myndigheter eller virksomhetsregistre. Bruk separat
   virksomhets-e-post/telefon og egnet forretningsadresse i offentlig kontakt.
