@@ -104,13 +104,23 @@ authTabs.forEach((tab) => {
 
 document.getElementById('login-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
   const button = document.getElementById('login-submit-btn');
   if (button.disabled) return;
   button.disabled = true;
   button.textContent = 'Logger inn...';
-  await signIn(event.target.email.value, event.target.password.value);
-  button.disabled = false;
-  button.textContent = 'Logg inn';
+  try {
+    await signIn(
+      form.elements.namedItem('email').value,
+      form.elements.namedItem('password').value,
+    );
+  } catch (error) {
+    console.error('Uventet innloggingsfeil:', error);
+    showToast('Kunne ikke logge inn. Prøv igjen.', 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Logg inn';
+  }
 });
 
 document.getElementById('forgot-password-btn')?.addEventListener('click', () => {
@@ -147,15 +157,26 @@ document.getElementById('resend-confirmation-btn')?.addEventListener('click', as
 
 document.getElementById('register-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const form = event.target;
+  const form = event.currentTarget;
   const button = document.getElementById('register-submit-btn');
   if (button.disabled) return;
 
-  if (form.password.value.length < 12) {
+  const field = (name) => form.elements.namedItem(name);
+  const emailField = field('email');
+  const passwordField = field('password');
+  const fullNameField = field('fullName');
+  const roleField = field('role');
+  const occupationField = field('occupation');
+  const institutionField = field('institution');
+  const incomeStatusField = field('incomeStatus');
+  const monthlyBudgetField = field('monthlyBudgetMax');
+  const acceptTermsField = field('acceptTerms');
+
+  if (passwordField.value.length < 12) {
     showToast('Passordet må være minst 12 tegn.', 'error');
     return;
   }
-  if (!form.acceptTerms.checked) {
+  if (!acceptTermsField.checked) {
     showToast('Du må godta bruksvilkårene for å opprette konto.', 'error');
     return;
   }
@@ -168,26 +189,31 @@ document.getElementById('register-form')?.addEventListener('submit', async (even
 
   button.disabled = true;
   button.textContent = 'Oppretter konto...';
-  registrationEmail = form.email.value.trim();
+  registrationEmail = emailField.value.trim();
 
-  const result = await signUp(registrationEmail, form.password.value, form.fullName.value.trim(), form.role.value, {
-    occupation: form.occupation.value || null,
-    institution: form.institution.value.trim() || null,
-    income_status: form.incomeStatus.value || null,
-    monthly_budget_max: form.monthlyBudgetMax.value || null,
-    priority_tags: priorityTags,
-    terms_accepted_at: new Date().toISOString(),
-    terms_version: TERMS_VERSION,
-  });
+  try {
+    const result = await signUp(registrationEmail, passwordField.value, fullNameField.value.trim(), roleField.value, {
+      occupation: occupationField.value || null,
+      institution: institutionField.value.trim() || null,
+      income_status: incomeStatusField.value || null,
+      monthly_budget_max: monthlyBudgetField.value || null,
+      priority_tags: priorityTags,
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: TERMS_VERSION,
+    });
 
-  if (result?.needsConfirmation) {
-    form.classList.add('hidden');
-    document.getElementById('check-email-state')?.classList.remove('hidden');
-    startResendCooldown();
+    if (result?.needsConfirmation) {
+      form.classList.add('hidden');
+      document.getElementById('check-email-state')?.classList.remove('hidden');
+      startResendCooldown();
+    }
+  } catch (error) {
+    console.error('Uventet registreringsfeil:', error);
+    showToast('Kunne ikke opprette kontoen. Prøv igjen.', 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Opprett konto';
   }
-
-  button.disabled = false;
-  button.textContent = 'Opprett konto';
 });
 
 document.getElementById('mobile-menu-btn')?.addEventListener('click', (event) => {

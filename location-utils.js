@@ -19,6 +19,15 @@ const HIGHER_EDUCATION_SEARCHES = [
   { query: 'VID vitenskapelige høgskole', aliases: ['vid', 'vid hogskole', 'vid høgskole'] },
   { query: 'Høyskolen Kristiania', aliases: ['kristiania', 'hoyskolen kristiania', 'høyskolen kristiania'] },
 ];
+const KNOWN_HIGHER_EDUCATION = [
+  { id: 'known-uio', name: 'Universitetet i Oslo', municipality: 'Oslo', latitude: 59.9399, longitude: 10.7219, aliases: ['uio', 'universitetet oslo', 'oslo universitet'] },
+  { id: 'known-uib', name: 'Universitetet i Bergen', municipality: 'Bergen', latitude: 60.3878, longitude: 5.3221, aliases: ['uib', 'bergen universitet'] },
+  { id: 'known-uit', name: 'UiT Norges arktiske universitet', municipality: 'Tromsø', latitude: 69.6810, longitude: 18.9714, aliases: ['uit', 'tromso universitet', 'tromsø universitet'] },
+  { id: 'known-ntnu', name: 'NTNU Gløshaugen', municipality: 'Trondheim', latitude: 63.4180, longitude: 10.4027, aliases: ['ntnu', 'trondheim universitet', 'gloshaugen', 'gløshaugen'] },
+  { id: 'known-nmbu', name: 'Norges miljø- og biovitenskapelige universitet', municipality: 'Ås', latitude: 59.6653, longitude: 10.7670, aliases: ['nmbu', 'as universitet', 'ås universitet'] },
+  { id: 'known-oslomet', name: 'OsloMet – storbyuniversitetet', municipality: 'Oslo', latitude: 59.9212, longitude: 10.7335, aliases: ['oslomet', 'oslo met', 'storbyuniversitetet'] },
+  { id: 'known-bi', name: 'Handelshøyskolen BI', municipality: 'Oslo', latitude: 59.9498, longitude: 10.7685, aliases: ['bi', 'bi oslo', 'handelshøyskolen bi', 'handelshoyskolen bi'] },
+];
 
 function normalizeText(value) {
   return String(value || '')
@@ -129,14 +138,33 @@ function schoolRelevance(place, originalQuery, searches) {
   return score;
 }
 
+function knownSchoolResults(query) {
+  const wanted = normalizeText(query);
+  if (wanted.length < 2) return [];
+  return KNOWN_HIGHER_EDUCATION
+    .filter((school) => [school.name, school.municipality, ...school.aliases]
+      .map(normalizeText)
+      .some((term) => term === wanted || term.startsWith(wanted) || (wanted.length >= 3 && term.includes(wanted))))
+    .map((school) => ({
+      ...school,
+      county: '',
+      type: 'Universitet/høgskole',
+      label: `${school.name}, ${school.municipality}`,
+    }));
+}
+
 export async function searchSchools(query, options = {}) {
   const searches = schoolSearchQueries(query);
   if (!searches.length) return [];
+  const known = knownSchoolResults(query);
+  // De vanligste studiestedene skal dukke opp med én gang, også dersom den
+  // eksterne stedsnavntjenesten er treg eller utilgjengelig.
+  if (known.length) return known.slice(0, options.limit || 8);
   const resultSets = await Promise.all(searches.map(async (search) => {
     try {
       return await fetchPlaces(search, { ...options, limit: 50 });
     } catch (error) {
-      if (error?.name === 'AbortError') throw error;
+      if (error?.name === 'AbortError' && options.signal?.aborted) throw error;
       return [];
     }
   }));

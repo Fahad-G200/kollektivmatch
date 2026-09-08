@@ -36,6 +36,7 @@ const seekers = read('home-seekers.js');
 const paymentResult = read('boost-payment-result.js');
 const storage = read('storage-utils.js');
 const config = read('supabase-config.js');
+const app = read('app.js');
 const allBrowserJs = readdirSync(root)
   .filter((name) => name.endsWith('.js'))
   .map(read)
@@ -45,6 +46,9 @@ const allBrowserJs = readdirSync(root)
 assert.match(auth, /target\.origin !== window\.location\.origin/);
 assert.match(auth, /target\.username \|\| target\.password/);
 assert.match(config, /flowType: 'pkce'/);
+assert.match(app, /form\.elements\.namedItem\('email'\)/);
+assert.match(app, /form\.elements\.namedItem\('password'\)/);
+assert.doesNotMatch(app, /event\.target\.email|form\.password|form\.acceptTerms/);
 assert.match(callback, /exchangeCodeForSession/);
 assert.match(callback, /clearSensitiveUrl\(\)/);
 assert.doesNotMatch(callback, /getSession\(\)/);

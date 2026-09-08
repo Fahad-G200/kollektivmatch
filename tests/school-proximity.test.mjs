@@ -47,7 +47,17 @@ globalThis.fetch = async (url) => {
 try {
   const aliasResults = await searchSchools('UiO', { limit: 8, timeoutMs: 100 });
   assert.equal(aliasResults[0]?.name, 'Universitetet i Oslo', 'UiO-forkortelsen skal gi riktig universitet');
-  assert.ok(requestedSearches.some((search) => search?.startsWith('Universitetet i Oslo')), 'Alias-søket skal sendes til Kartverket');
+  assert.equal(requestedSearches.length, 0, 'Kjente universiteter skal vises umiddelbart uten nettverksventing');
+} finally {
+  globalThis.fetch = originalFetch;
+}
+
+globalThis.fetch = async () => { throw new Error('nettverket er utilgjengelig'); };
+try {
+  const fallbackResults = await searchSchools('NTNU', { limit: 8, timeoutMs: 100 });
+  assert.equal(fallbackResults[0]?.name, 'NTNU Gløshaugen', 'Kjente universiteter skal virke uten Kartverket');
+  assert.ok(Number.isFinite(fallbackResults[0]?.latitude));
+  assert.ok(Number.isFinite(fallbackResults[0]?.longitude));
 } finally {
   globalThis.fetch = originalFetch;
 }
