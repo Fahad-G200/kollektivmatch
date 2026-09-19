@@ -1,11 +1,87 @@
 # KollektivMatch
 
-KollektivMatch er en HTML/CSS/JavaScript-plattform for å finne og annonsere
-kollektivrom. Supabase brukes til Auth, PostgreSQL, RLS, Storage og Realtime.
-Next/Vinext-laget finnes bare for bygging og publisering hos OpenAI Sites;
-produktlogikken er fortsatt vanlig nettleser-JavaScript og er ikke avhengig av
-Next-spesifikke API-er. Tailwind og den låste Supabase-klienten bygges lokalt;
-nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
+[![Tester og bygg](https://github.com/Fahad-G200/kollektivmatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Fahad-G200/kollektivmatch/actions/workflows/ci.yml)
+
+Et selvstendig porteføljeprosjekt for å finne og annonsere kollektivrom. Jeg har
+utviklet løsningen fra idé og brukerflyt til database, sikkerhet, integrasjoner,
+automatiserte tester og produksjonsbygg.
+
+## Kort fortalt
+
+KollektivMatch lar boligsøkere filtrere annonser, sammenligne dokumenterte
+preferanser og forstå hvorfor en bolig passer. Utleiere kan opprette annonser,
+håndtere bilder og video og kommunisere med interesserte brukere. Løsningen er
+bygget med vanlig HTML, CSS og JavaScript i frontend, mens Supabase leverer
+innlogging, PostgreSQL, tilgangskontroll, fillagring og sanntidsmeldinger.
+
+Prosjektet er en teknisk demonstrasjon og ikke en ferdig kommersiell tjeneste.
+Juridiske virksomhetsopplysninger, produksjonsavtaler og enkelte eksterne
+integrasjoner må ferdigstilles før reell lansering.
+
+## Dette demonstrerer prosjektet
+
+- **Webutvikling:** responsivt grensesnitt i HTML, Tailwind/CSS og modulær
+  JavaScript, med en liten Next/Vinext-ramme for bygg og hosting.
+- **Databaser og integrasjoner:** PostgreSQL, Supabase Auth, Row Level Security,
+  Storage, Realtime, Edge Functions og dokumenterte migreringer.
+- **Automatisering og kvalitet:** Git-basert arbeidsflyt, repeterbart bygg og 71
+  automatiserte testresultater for blant annet brukerflyt, matching, betaling,
+  personvern og sikkerhet.
+- **Praktisk bruk av AI:** avgrensede bildeobservasjoner med strukturert output,
+  kostnadsgrenser og tydelig kildevisning. Selve matchprosenten beregnes
+  deterministisk i kode og overlates ikke til modellen.
+- **Produkteierskap og problemløsning:** funksjoner er vurdert ut fra brukerbehov,
+  personvern, feilsituasjoner og driftsrisiko, med tekniske valg forklart i et
+  språk som også ikke-tekniske kan følge.
+
+## Utvalgte funksjoner
+
+- Forklarbar Smart Match med oppfylte, delvise og ukjente kriterier.
+- Boligsøk, annonser, profiler, meldinger, rapportering og dataeksport.
+- Bilde- og videohåndtering med validering og opplasting til brukerens mappe.
+- Skolesøk via Kartverket og valgfrie kartkontroller via Google Maps.
+- Serververifisert betalingsflyt for annonsefremheving med Stripe/Vipps-kode.
+- Sikkerhetstiltak som PKCE, RLS, rate limits, sikre webhooks og private
+  serverhemmeligheter.
+
+## Teknisk oversikt
+
+```text
+Nettleser (HTML/CSS/JavaScript)
+          │
+          ├── Supabase Auth og sikre sesjoner
+          ├── PostgreSQL med RLS og RPC-er
+          ├── Storage og Realtime
+          └── Edge Functions
+                 ├── betaling og webhooks
+                 ├── AI-bildekontroll
+                 └── kart- og rutekontroll
+```
+
+Produktlogikken er vanlig nettleser-JavaScript og er ikke avhengig av
+Next-spesifikke API-er. Tailwind og den låste Supabase-klienten bygges lokalt,
+slik at nettleseren ikke kjører produktkode fra et flytende tredjeparts-CDN.
+
+## Kom raskt i gang
+
+Forutsetninger: Node.js 22.13 eller nyere og npm.
+
+```bash
+git clone https://github.com/Fahad-G200/kollektivmatch.git
+cd kollektivmatch
+npm ci
+npm test
+npm run dev
+```
+
+Åpne adressen utviklingsserveren skriver ut. De lokale eksempelannonsene er
+oppdiktede og gjør det mulig å utforske søk og matching uten produksjonsdata.
+
+## Andre relevante prosjekter
+
+- [IT Helpdesk – Python/Flask, SQL, Docker og rollebasert tilgang](https://github.com/Fahad-G200/helpdesk-prosjekt-struktur)
+
+Detaljer om databaseoppsett, migreringer og produksjonskontroller følger under.
 
 ## Viktig før oppstart
 
