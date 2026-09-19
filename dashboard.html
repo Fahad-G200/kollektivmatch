@@ -116,7 +116,7 @@
 
     <section id="preferences" class="bg-white rounded-3xl border border-line p-6 md:p-8 mb-12 scroll-mt-24">
       <h2 class="font-display font-bold text-2xl">Smart Match-preferanser</h2>
-      <p class="text-sm text-mist mt-1 mb-5">Fyll ut minst to felt for å få en meningsfull matchprosent.</p>
+      <p class="text-sm text-mist mt-1 mb-5">Fyll ut minst to felt for å få en meningsfull matchprosent. Hvert valgt kriterium vises separat i matchforklaringen.</p>
       <p id="preferences-unavailable" class="hidden mb-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">Smart Match-preferanser blir tilgjengelige når databasemigreringen er installert.</p>
       <form id="preferences-form" class="space-y-5">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -133,6 +133,12 @@
         <div>
           <label for="preference-location" class="block text-xs font-semibold text-mist mb-1">Ønsket by eller område</label>
           <input id="preference-location" name="search_location" maxlength="100" placeholder="F.eks. Oslo eller Majorstuen" class="w-full px-4 py-3 rounded-xl border border-line text-sm" />
+        </div>
+
+        <div>
+          <label for="preference-transit" class="block text-xs font-semibold text-mist mb-1">Maks minutter til kollektivtransport</label>
+          <input id="preference-transit" name="max_transit_minutes" type="number" min="0" max="600" step="1" placeholder="F.eks. 10" class="w-full px-4 py-3 rounded-xl border border-line text-sm" />
+          <p class="mt-1 text-[11px] text-mist">Sammenlignes med oppgitt gangtid til kollektivtransport i annonsen.</p>
         </div>
 
         <fieldset>
@@ -158,6 +164,18 @@
             <label class="flex items-center gap-2"><input type="checkbox" name="priority_tags" value="stort-kjokken" class="accent-primary-600" />Stort kjøkken / sosiale soner</label>
           </div>
         </fieldset>
+
+        <fieldset id="preferred-amenities-fields">
+          <legend class="text-xs font-semibold text-mist mb-2">Fasiliteter i nærheten</legend>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_amenities" value="matbutikk" class="accent-primary-600" />Matbutikk</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_amenities" value="kollektivtransport" class="accent-primary-600" />Kollektivtransport</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_amenities" value="treningssenter" class="accent-primary-600" />Treningssenter</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="preferred_amenities" value="grontomrade" class="accent-primary-600" />Grøntområde</label>
+          </div>
+        </fieldset>
+
+        <p id="extended-match-preferences-unavailable" class="hidden rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">Lagring av transport og fasiliteter blir tilgjengelig når den nyeste matchmigreringen er installert. De øvrige preferansene kan fortsatt lagres.</p>
 
         <fieldset id="home-seeker-sharing" class="home-seeker-opt-in rounded-2xl border border-line p-5">
           <legend class="px-1 text-sm font-bold">La utleiere finne deg</legend>
@@ -256,6 +274,6 @@
   <footer class="border-t border-line bg-white"><div class="max-w-4xl mx-auto px-5 py-6 text-xs text-mist flex flex-wrap justify-between gap-4"><span>© 2026 KollektivMatch</span><nav class="legal-links"><a href="privacy.html">Personvern</a><a href="terms.html">Vilkår</a><a href="safety.html">Trygg bolighandel</a></nav></div></footer>
 
   <div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col items-end" aria-live="polite"></div>
-  <script type="module" src="dashboard.js?v=20260826-2"></script>
+  <script type="module" src="dashboard.js?v=20260911-1"></script>
 </body>
 </html>

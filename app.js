@@ -9,9 +9,11 @@ import {
   rememberReturnTo,
 } from './auth.js';
 import { ENABLE_GOOGLE_AUTH } from './supabase-config.js';
-import { loadListings, loadMoreListings, populateCitySuggestions } from './feed.js?v=20260908-1';
+import { loadListings, loadMoreListings, populateCitySuggestions } from './feed.js?v=20260912-2';
 import { openModal, closeModal, showToast } from './ui.js';
-import { searchSchools } from './location-utils.js?v=20260908-1';
+import { searchSchools } from './location-utils.js?v=20260911-1';
+import { renderExternalSearch } from './external-search.js?v=20260912-3';
+import { initExternalListingCheck } from './external-listing-check.js?v=20260912-1';
 
 const authButtons = document.getElementById('auth-buttons');
 const userMenu = document.getElementById('user-menu');
@@ -29,15 +31,23 @@ const schoolStatus = document.getElementById('school-search-status');
 const clearSchoolButton = document.getElementById('clear-school');
 const advancedFilters = document.getElementById('advanced-filters');
 const advancedFilterCount = document.getElementById('advanced-filter-count');
+const externalListingCheck = initExternalListingCheck({
+  getFilters: () => getFiltersFromForm(),
+  openLogin: () => {
+    resetAuthModalView();
+    openModal('auth-modal');
+  },
+  showToast,
+});
 let registrationEmail = '';
 let resendTimer = null;
 let schoolSearchTimer = null;
 let schoolSearchController = null;
-const TERMS_VERSION = '2026-08-23';
+const TERMS_VERSION = '2026-09-12';
 const FILTER_LABELS = {
   propertyType: {
     leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig',
-    rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', annet: 'Annet',
+    rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', hytte: 'Hytte', annet: 'Annet',
   },
   preferredOccupation: { student: 'Student', jobb: 'I jobb', annet: 'Annet' },
   amenities: {
@@ -45,7 +55,7 @@ const FILTER_LABELS = {
     treningssenter: 'Trening', grontomrade: 'Grøntområde',
   },
   lifestyleTags: {
-    'nyoppusset-bad': 'Pent bad', 'stort-kjokken': 'Sosiale soner',
+    'nyoppusset-bad': 'Pent bad', 'moderne-stil': 'Moderne stil', 'stort-kjokken': 'Sosiale soner',
     'rolig-miljo': 'Rolig miljø', 'stort-rom': 'Stort rom',
   },
 };
@@ -54,6 +64,7 @@ onAuthChange((user) => {
   authButtons?.classList.toggle('hidden', !!user);
   userMenu?.classList.toggle('hidden', !user);
   userMenu?.classList.toggle('flex', !!user);
+  externalListingCheck.setUser(user);
 });
 
 document.getElementById('logout-btn')?.addEventListener('click', signOut);
@@ -172,8 +183,8 @@ document.getElementById('register-form')?.addEventListener('submit', async (even
   const monthlyBudgetField = field('monthlyBudgetMax');
   const acceptTermsField = field('acceptTerms');
 
-  if (passwordField.value.length < 12) {
-    showToast('Passordet må være minst 12 tegn.', 'error');
+  if (passwordField.value.length < 6) {
+    showToast('Passordet må være minst 6 tegn.', 'error');
     return;
   }
   if (!acceptTermsField.checked) {
@@ -412,7 +423,7 @@ function renderActiveFilters(filters) {
   if (filters.preferredOccupation) values.push({
     key: 'preferredOccupation', label: `Passer for: ${FILTER_LABELS.preferredOccupation[filters.preferredOccupation] || filters.preferredOccupation}`,
   });
-  if (filters.maxTransitMinutes) values.push({ key: 'maxTransitMinutes', label: `Maks ${filters.maxTransitMinutes} min til kollektivt` });
+  if (String(filters.maxTransitMinutes ?? '').trim() !== '') values.push({ key: 'maxTransitMinutes', label: `Maks ${filters.maxTransitMinutes} min til kollektivt` });
   if (filters.schoolName) values.push({ key: 'schoolName', label: `Nærmest: ${filters.schoolName}` });
   filters.amenities.forEach((value) => values.push({
     key: 'amenities', value, label: FILTER_LABELS.amenities[value] || value,
@@ -496,6 +507,8 @@ function disableUnavailableAdvancedFilters(filters) {
   }
   filtersToUrl(filters);
   renderActiveFilters(filters);
+  renderExternalSearch(filters);
+  externalListingCheck.refreshPreferences();
 }
 
 async function submitFilters({ updateUrl = true } = {}) {
@@ -506,6 +519,8 @@ async function submitFilters({ updateUrl = true } = {}) {
   }
   if (updateUrl) filtersToUrl(filters);
   renderActiveFilters(filters);
+  renderExternalSearch(filters);
+  externalListingCheck.refreshPreferences();
   const result = await loadListings(filters);
   if (result?.propertyTypeUnavailable) disableUnavailableAdvancedFilters(filters);
 }
@@ -525,7 +540,26 @@ document.getElementById('reset-filters')?.addEventListener('click', () => {
   submitFilters();
 });
 
-filterForm?.addEventListener('change', () => updateAdvancedFilterSummary());
+function refreshExternalSearchPreview() {
+  renderExternalSearch(getFiltersFromForm());
+  externalListingCheck.refreshPreferences();
+}
+
+filterForm?.addEventListener('input', refreshExternalSearchPreview);
+filterForm?.addEventListener('change', () => {
+  updateAdvancedFilterSummary();
+  refreshExternalSearchPreview();
+});
+
+document.getElementById('copy-external-search')?.addEventListener('click', async (event) => {
+  const searchText = event.currentTarget.dataset.searchText || 'bolig til leie';
+  try {
+    await navigator.clipboard.writeText(searchText);
+    showToast('Søketeksten er kopiert. Lim den inn på bolig- eller Facebook-siden.', 'success');
+  } catch {
+    showToast('Kunne ikke kopiere automatisk. Prøv igjen fra en sikker nettadresse.', 'error');
+  }
+});
 
 document.getElementById('load-more-btn')?.addEventListener('click', loadMoreListings);
 

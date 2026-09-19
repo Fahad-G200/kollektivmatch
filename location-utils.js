@@ -203,19 +203,43 @@ export async function geocodeListingArea({ area, city }, options = {}) {
   const cleanedArea = String(area || '').trim();
   const cleanedCity = String(city || '').trim();
   if (!cleanedCity) return null;
-  const queries = cleanedArea ? [`${cleanedArea} ${cleanedCity}`, cleanedArea, cleanedCity] : [cleanedCity];
+  const searches = cleanedArea
+    ? [
+      { query: `${cleanedArea} ${cleanedCity}`, precision: 'area' },
+      { query: cleanedArea, precision: 'area' },
+      { query: cleanedCity, precision: 'city' },
+    ]
+    : [{ query: cleanedCity, precision: 'city' }];
+  const seenQueries = new Set();
 
-  for (const query of [...new Set(queries)]) {
+  for (const search of searches) {
+    const searchKey = `${search.precision}|${search.query}`;
+    if (seenQueries.has(searchKey)) continue;
+    seenQueries.add(searchKey);
     try {
-      const places = await fetchPlaces(query, { ...options, limit: 25 });
+      const places = await fetchPlaces(search.query, { ...options, limit: 25 });
+      const wantedArea = normalizeText(cleanedArea);
+      const wantedCity = normalizeText(cleanedCity);
       const ranked = places
-        .map((place) => ({ place, score: placeRelevance(place, cleanedArea, cleanedCity) }))
+        .filter((place) => {
+          const name = normalizeText(place.name);
+          const municipality = normalizeText(place.municipality);
+          if (search.precision === 'area') {
+            const areaMatches = name === wantedArea || name.startsWith(wantedArea) || name.includes(wantedArea);
+            return municipality === wantedCity && areaMatches;
+          }
+          return name === wantedCity || municipality === wantedCity;
+        })
+        .map((place) => ({
+          place,
+          score: placeRelevance(place, search.precision === 'area' ? cleanedArea : '', cleanedCity),
+        }))
         .sort((a, b) => b.score - a.score);
-      if (ranked[0]?.place && (ranked[0].score > 0 || !cleanedArea)) {
+      if (ranked[0]?.place) {
         return {
           latitude: ranked[0].place.latitude,
           longitude: ranked[0].place.longitude,
-          precision: cleanedArea ? 'area' : 'city',
+          precision: search.precision,
         };
       }
     } catch (error) {

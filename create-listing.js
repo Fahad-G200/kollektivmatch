@@ -9,7 +9,7 @@ import {
   removeOwnedVideo,
   safePublicMediaUrl,
 } from './storage-utils.js?v=20260828-1';
-import { geocodeListingArea } from './location-utils.js?v=20260825-1';
+import { geocodeListingArea } from './location-utils.js?v=20260911-1';
 
 const form = document.getElementById('create-listing-form');
 const authCheckState = document.getElementById('auth-check-state');
@@ -48,7 +48,7 @@ const DRAFT_SIMPLE_FIELDS = [
   'title', 'property_type', 'price', 'move_in_date', 'room_size_m2', 'deposit_amount',
   'furnished', 'description', 'city', 'area', 'transit_minutes',
 ];
-const DRAFT_CHECKBOX_FIELDS = ['rent_includes', 'amenities', 'lifestyle_tags', 'preferred_occupations'];
+const DRAFT_CHECKBOX_FIELDS = ['rent_includes', 'amenities', 'lifestyle_tags', 'preferred_occupations', 'ai_image_analysis_allowed'];
 const PLACEHOLDER_IMG = 'assets/placeholder.svg';
 let currentUser = null;
 let imageItems = [];
@@ -547,6 +547,7 @@ function legacyListingFields(fields) {
     location_lat,
     location_lon,
     location_precision,
+    ai_image_analysis_allowed,
     ...legacyFields
   } = fields;
   return legacyFields;
@@ -587,6 +588,8 @@ async function loadForEdit() {
   checkBoxes('amenities', listing.amenities);
   checkBoxes('lifestyle_tags', listing.lifestyle_tags);
   checkBoxes('preferred_occupations', listing.preferred_occupations);
+  const analysisCheckbox = form.elements.namedItem('ai_image_analysis_allowed');
+  if (analysisCheckbox) analysisCheckbox.checked = listing.ai_image_analysis_allowed === true;
   const oldImages = Array.isArray(listing.images) && listing.images.length ? listing.images : (listing.image_url ? [listing.image_url] : []);
   originalExistingImages = [...new Set(oldImages)]
     .map((url) => safePublicMediaUrl(url, LISTING_IMAGES_BUCKET))
@@ -689,6 +692,7 @@ form.addEventListener('submit', async (event) => {
     grocery_nearby: amenities.includes('matbutikk'),
     gym_nearby: amenities.includes('treningssenter'),
     green_areas_nearby: amenities.includes('grontomrade'),
+    ai_image_analysis_allowed: data.get('ai_image_analysis_allowed') === 'on',
   };
 
   const result = await saveListing(fields);

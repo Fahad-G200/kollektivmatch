@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { haversineKm, formatDistance, schoolSearchQueries, searchSchools } from '../location-utils.js';
+import { geocodeListingArea, haversineKm, formatDistance, schoolSearchQueries, searchSchools } from '../location-utils.js';
 
 const migration = fs.readFileSync(new URL('../migrations/2026-08-25_school_proximity.sql', import.meta.url), 'utf8');
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -61,6 +61,42 @@ try {
 } finally {
   globalThis.fetch = originalFetch;
 }
+
+const geocodeSearches = [];
+globalThis.fetch = async (url) => {
+  const search = new URL(url).searchParams.get('sok') || '';
+  geocodeSearches.push(search);
+  const isCityFallback = search.startsWith('Trondheim');
+  const wrongMunicipality = {
+    stedsnummer: 1,
+    skrivemåte: 'Sentrum',
+    navneobjekttype: 'Bydel',
+    representasjonspunkt: { nord: 59.9139, øst: 10.7522 },
+    kommuner: [{ kommunenavn: 'Oslo' }],
+    fylker: [{ fylkesnavn: 'Oslo' }],
+  };
+  const correctCity = {
+    stedsnummer: 2,
+    skrivemåte: 'Trondheim',
+    navneobjekttype: 'By',
+    representasjonspunkt: { nord: 63.4305, øst: 10.3951 },
+    kommuner: [{ kommunenavn: 'Trondheim' }],
+    fylker: [{ fylkesnavn: 'Trøndelag' }],
+  };
+  return {
+    ok: true,
+    async json() {
+      return { navn: isCityFallback ? [wrongMunicipality, correctCity] : [wrongMunicipality] };
+    },
+  };
+};
+try {
+  const approximate = await geocodeListingArea({ area: 'Sentrum', city: 'Trondheim' }, { timeoutMs: 100 });
+  assert.deepEqual(approximate, { latitude: 63.4305, longitude: 10.3951, precision: 'city' }, 'Et område i feil kommune skal forkastes, og bypunktet skal merkes som bypresisjon');
+  assert.deepEqual(geocodeSearches, ['Sentrum Trondheim*', 'Sentrum*', 'Trondheim*']);
+} finally {
+  globalThis.fetch = originalFetch;
+}
 assert.match(locationUtils, /api\.kartverket\.no\/stedsnavn\/v1\/navn/);
 assert.match(locationUtils, /SCHOOL_TYPES = new Set\(\['Skole', 'Universitet\/høgskole'\]\)/);
 assert.match(index, /id="f-school"[\s\S]+id="school-suggestions"/);
@@ -76,4 +112,4 @@ assert.match(migration, /add column if not exists location_lat double precision/
 assert.match(migration, /location_precision in \('area', 'city'\)/i);
 assert.match(migration, /grant select \(location_lat, location_lon, location_precision\)[\s\S]+to anon, authenticated/i);
 
-console.log('Skolenærhet: 23 tester besto.');
+console.log('Skolenærhet: 25 tester besto.');

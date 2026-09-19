@@ -65,8 +65,8 @@ resetForm.addEventListener('submit', async (event) => {
   const password = event.target.password.value;
   const passwordConfirm = event.target.passwordConfirm.value;
 
-  if (password.length < 12) {
-    showToast('Passordet må være minst 12 tegn.', 'error');
+  if (password.length < 6) {
+    showToast('Passordet må være minst 6 tegn.', 'error');
     return;
   }
 

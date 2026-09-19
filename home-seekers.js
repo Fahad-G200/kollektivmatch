@@ -1,7 +1,7 @@
 import { supabase } from './supabase-config.js';
 import { rememberReturnTo } from './auth.js';
 import { showToast } from './ui.js';
-import { computeMatch, compareBestMatch } from './match.js?v=20260827-1';
+import { computeMatch, compareBestMatch } from './match.js?v=20260912-2';
 import { PROFILE_AVATARS_BUCKET, safePublicMediaUrl } from './storage-utils.js?v=20260828-1';
 
 const select = document.getElementById('listing-select');
@@ -12,8 +12,9 @@ const summary = document.getElementById('seeker-summary');
 const dialog = document.getElementById('contact-seeker-dialog');
 const form = document.getElementById('contact-seeker-form');
 const OCCUPATION_LABELS = { student: 'Student', jobb: 'I jobb', annet: 'Annet' };
-const PROPERTY_LABELS = { leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig', rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', annet: 'Annet' };
+const PROPERTY_LABELS = { leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig', rekkehus: 'Rekkehus', studentbolig: 'Studentbolig', hytte: 'Hytte', annet: 'Annet' };
 const PRIORITY_LABELS = { 'stort-rom': 'God plass', 'moderne-stil': 'Moderne stil', 'nyoppusset-bad': 'Fint bad', 'rolig-miljo': 'Rolig miljø', 'stort-kjokken': 'Sosiale soner' };
+const AMENITY_LABELS = { matbutikk: 'Nær matbutikk', kollektivtransport: 'Nær kollektivtransport', treningssenter: 'Nær treningssenter', grontomrade: 'Nær grøntområde' };
 let currentUser = null;
 let listings = [];
 let seekers = [];
@@ -44,15 +45,19 @@ function matchLevel(percentage) {
 function matchBreakdown(match) {
   if (!Array.isArray(match?.breakdown) || !match.breakdown.length) return '';
   const rows = match.breakdown.map((item) => {
-    const percentage = Math.max(0, Math.min(100, Number(item.percentage) || 0));
+    const unknown = item.status === 'unknown' || item.percentage === null || item.percentage === undefined;
+    const percentage = unknown ? null : Math.max(0, Math.min(100, Number(item.percentage) || 0));
     return `
-      <li class="match-breakdown-row">
-        <div class="match-breakdown-label"><span>${escapeHtml(item.label)}</span><span>${percentage}% · ${matchLevel(percentage)}</span></div>
-        <progress class="match-breakdown-progress" max="100" value="${percentage}" aria-label="${escapeHtml(item.label)}: ${percentage} prosent"></progress>
+      <li class="match-breakdown-row${unknown ? ' is-unknown' : ''}">
+        <div class="match-breakdown-label"><span>${escapeHtml(item.label)}</span><span>${unknown ? 'Ikke oppgitt' : `${percentage}% · ${matchLevel(percentage)}`}</span></div>
+        ${unknown
+          ? '<span class="match-breakdown-unknown" aria-hidden="true"></span>'
+          : `<progress class="match-breakdown-progress" max="100" value="${percentage}" aria-label="${escapeHtml(item.label)}: ${percentage} prosent"></progress>`}
         <p>${escapeHtml(item.detail)}</p>
       </li>`;
   }).join('');
-  return `<details class="match-breakdown-card match-breakdown-card--seeker"><summary>Hvorfor ${Number(match.score)} %?</summary><p class="match-breakdown-intro">Prosenten bruker bare opplysninger som finnes i både profilen og annonsen.</p><ul>${rows}</ul></details>`;
+  const heading = typeof match.score === 'number' ? `Hvorfor ${Number(match.score)} %?` : 'Hva kunne kontrolleres?';
+  return `<details class="match-breakdown-card match-breakdown-card--seeker"><summary>${heading}</summary><p class="match-breakdown-intro">Alle valgte kriterier vises. Manglende data merkes «Ikke oppgitt» og teller ikke som oppfylt.</p><ul>${rows}</ul></details>`;
 }
 
 function selectedListing() {
@@ -69,7 +74,9 @@ function safeAvatar(seeker) {
 function seekerCard(seeker) {
   const match = seeker._match;
   const matchCriteria = Number(match?.criteria) || 0;
-  const matchBasis = matchCriteria ? `${matchCriteria} ${matchCriteria === 1 ? 'kriterium' : 'kriterier'}` : '';
+  const verifiedCriteria = Number(match?.verifiedCriteria ?? matchCriteria) || 0;
+  const unknownCriteria = Number(match?.unknownCriteria) || 0;
+  const matchBasis = matchCriteria ? `${verifiedCriteria} av ${matchCriteria} ${matchCriteria === 1 ? 'kriterium' : 'kriterier'} kontrollert${unknownCriteria ? ` · ${unknownCriteria} ikke oppgitt` : ''}` : '';
   const badges = seeker.is_verified
     ? '<span class="trust-mini-badge">✓ Utdannings-e-post</span>'
     : '';
@@ -77,16 +84,18 @@ function seekerCard(seeker) {
     seeker.monthly_budget_max ? `Maks ${new Intl.NumberFormat('nb-NO').format(seeker.monthly_budget_max)} kr/mnd` : '',
     seeker.desired_move_in_date ? `Innflytting ${formatDate(seeker.desired_move_in_date)}` : '',
     seeker.search_location ? `Ser i ${escapeHtml(seeker.search_location)}` : '',
+    String(seeker.max_transit_minutes ?? '').trim() !== '' ? `Maks ${Number(seeker.max_transit_minutes)} min til kollektivtransport` : '',
   ].filter(Boolean);
   const tags = [
     ...(seeker.preferred_property_types || []).map((value) => PROPERTY_LABELS[value] || value),
+    ...(seeker.preferred_amenities || []).map((value) => AMENITY_LABELS[value] || value),
     ...(seeker.priority_tags || []).map((value) => PRIORITY_LABELS[value] || value),
-  ].slice(0, 5);
+  ].slice(0, 8);
   return `
     <article class="seeker-card bg-white rounded-3xl border border-line p-5 flex flex-col">
       <div class="flex items-start gap-3">
         <div class="seeker-avatar">${safeAvatar(seeker)}</div>
-        <div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold truncate">${escapeHtml(seeker.full_name || 'Boligsøker')}</h3><p class="text-xs text-mist mt-0.5">${escapeHtml(OCCUPATION_LABELS[seeker.occupation] || 'Boligsøker')}${seeker.institution ? ` · ${escapeHtml(seeker.institution)}` : ''}</p></div>${typeof match?.score === 'number' ? `<span class="seeker-match-badge" title="${escapeHtml([matchBasis ? `Basert på ${matchBasis}` : '', match.confidence === 'limited' ? 'Begrenset grunnlag' : '', match.explanation || ''].filter(Boolean).join(' · '))}">${match.score}%</span>` : ''}</div><div class="flex flex-wrap gap-1.5 mt-2">${badges}</div></div>
+        <div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold truncate">${escapeHtml(seeker.full_name || 'Boligsøker')}</h3><p class="text-xs text-mist mt-0.5">${escapeHtml(OCCUPATION_LABELS[seeker.occupation] || 'Boligsøker')}${seeker.institution ? ` · ${escapeHtml(seeker.institution)}` : ''}</p></div>${typeof match?.score === 'number' ? `<span class="seeker-match-badge" title="${escapeHtml([matchBasis, match.confidence === 'limited' ? 'Begrenset grunnlag' : '', match.explanation || ''].filter(Boolean).join(' · '))}">${match.score}%</span>` : ''}</div><div class="flex flex-wrap gap-1.5 mt-2">${badges}</div></div>
       </div>
       ${seeker.seeker_bio ? `<p class="text-sm text-mist leading-relaxed mt-4">${escapeHtml(seeker.seeker_bio)}</p>` : ''}
       ${preferences.length ? `<ul class="mt-4 space-y-1 text-xs text-mist">${preferences.map((item) => `<li>• ${item}</li>`).join('')}</ul>` : ''}

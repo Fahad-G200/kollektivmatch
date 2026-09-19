@@ -47,6 +47,7 @@ let avatarCropState = null;
 let boostProducts = [];
 let selectedBoostListing = null;
 let preferencesAvailable = true;
+let extendedMatchPreferencesAvailable = true;
 let homeSeekerAvailable = true;
 let profileFieldsAvailable = true;
 let boostAvailable = true;
@@ -99,6 +100,13 @@ function setPreferencesUnavailable() {
   preferencesAvailable = false;
   document.getElementById('preferences-unavailable')?.classList.remove('hidden');
   preferencesForm.querySelectorAll('input, button').forEach((control) => { control.disabled = true; });
+}
+
+function setExtendedMatchPreferencesUnavailable() {
+  extendedMatchPreferencesAvailable = false;
+  document.getElementById('extended-match-preferences-unavailable')?.classList.remove('hidden');
+  preferencesForm.querySelectorAll('[name="max_transit_minutes"], [name="preferred_amenities"]')
+    .forEach((control) => { control.disabled = true; });
 }
 
 function setHomeSeekerUnavailable() {
@@ -232,6 +240,10 @@ async function loadProfileAndPreferences() {
   preferencesForm.search_location.value = profile?.search_location ?? '';
   checkValues('preferred_property_types', profile?.preferred_property_types);
   checkValues('priority_tags', profile?.priority_tags);
+  if (Object.hasOwn(profile || {}, 'max_transit_minutes') && Object.hasOwn(profile || {}, 'preferred_amenities')) {
+    preferencesForm.max_transit_minutes.value = profile?.max_transit_minutes ?? '';
+    checkValues('preferred_amenities', profile?.preferred_amenities);
+  } else setExtendedMatchPreferencesUnavailable();
   if (Object.hasOwn(profile || {}, 'home_seeker_visible')) {
     preferencesForm.home_seeker_visible.checked = Boolean(profile?.home_seeker_visible);
     preferencesForm.seeker_bio.value = profile?.seeker_bio ?? '';
@@ -479,6 +491,11 @@ preferencesForm.addEventListener('submit', async (event) => {
   const data = new FormData(preferencesForm);
   const priorities = data.getAll('priority_tags');
   if (priorities.length > 3) return showToast('Velg maks 3 prioriteringer.', 'error');
+  const transitValue = String(data.get('max_transit_minutes') ?? '').trim();
+  if (extendedMatchPreferencesAvailable && transitValue
+    && (!Number.isInteger(Number(transitValue)) || Number(transitValue) < 0 || Number(transitValue) > 600)) {
+    return showToast('Oppgi kollektivtid som hele minutter mellom 0 og 600.', 'error');
+  }
   button.disabled = true;
   button.textContent = 'Lagrer …';
   const payload = {
@@ -487,6 +504,10 @@ preferencesForm.addEventListener('submit', async (event) => {
     preferred_property_types: data.getAll('preferred_property_types'),
     priority_tags: priorities,
   };
+  if (extendedMatchPreferencesAvailable) {
+    payload.max_transit_minutes = transitValue ? Number(transitValue) : null;
+    payload.preferred_amenities = data.getAll('preferred_amenities');
+  }
   if (homeSeekerAvailable) {
     payload.search_location = String(data.get('search_location') || '').trim().slice(0, 100) || null;
     payload.home_seeker_visible = data.get('home_seeker_visible') === 'on';
@@ -496,6 +517,8 @@ preferencesForm.addEventListener('submit', async (event) => {
       Boolean(payload.desired_move_in_date),
       payload.preferred_property_types.length > 0,
       priorities.length > 0,
+      Array.isArray(payload.preferred_amenities) && payload.preferred_amenities.length > 0,
+      payload.max_transit_minutes !== undefined && payload.max_transit_minutes !== null,
       Boolean(payload.search_location),
       Boolean(currentProfile?.occupation),
     ].filter(Boolean).length;

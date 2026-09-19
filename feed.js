@@ -1,8 +1,8 @@
 import { supabase } from './supabase-config.js';
 import { showToast } from './ui.js';
-import { selectExampleListings } from './example-listings.js';
-import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm, locationSearchParts } from './match.js?v=20260827-1';
-import { formatDistance } from './location-utils.js?v=20260825-1';
+import { selectExampleListings } from './example-listings.js?v=20260912-2';
+import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, locationSearchParts } from './match.js?v=20260912-2';
+import { formatDistance } from './location-utils.js?v=20260911-1';
 import {
   LISTING_IMAGES_BUCKET,
   PROFILE_AVATARS_BUCKET,
@@ -61,22 +61,27 @@ function matchLevel(percentage) {
 function matchBreakdownTemplate(match) {
   if (!Array.isArray(match?.breakdown) || !match.breakdown.length) return '';
   const rows = match.breakdown.map((item) => {
-    const percentage = Math.max(0, Math.min(100, Number(item.percentage) || 0));
+    const unknown = item.status === 'unknown' || item.percentage === null || item.percentage === undefined;
+    const percentage = unknown ? null : Math.max(0, Math.min(100, Number(item.percentage) || 0));
     return `
-      <li class="match-breakdown-row">
+      <li class="match-breakdown-row${unknown ? ' is-unknown' : ''}">
         <div class="match-breakdown-label">
           <span>${escapeHtml(item.label)}</span>
-          <span>${percentage}% · ${matchLevel(percentage)}</span>
+          <span>${unknown ? 'Ikke oppgitt' : `${percentage}% · ${matchLevel(percentage)}`}</span>
         </div>
-        <progress class="match-breakdown-progress" max="100" value="${percentage}" aria-label="${escapeHtml(item.label)}: ${percentage} prosent"></progress>
+        ${unknown
+          ? '<span class="match-breakdown-unknown" aria-hidden="true"></span>'
+          : `<progress class="match-breakdown-progress" max="100" value="${percentage}" aria-label="${escapeHtml(item.label)}: ${percentage} prosent"></progress>`}
         <p>${escapeHtml(item.detail)}</p>
       </li>`;
   }).join('');
+  const scoreIsKnown = typeof match.score === 'number';
+  const heading = scoreIsKnown ? `Hvorfor ${Number(match.score)} %?` : 'Hva kunne kontrolleres?';
 
   return `
     <details class="match-breakdown-card">
-      <summary>Hvorfor ${Number(match.score)} %?</summary>
-      <p class="match-breakdown-intro">Prosenten beregnes bare fra opplysninger både du og annonsen har fylt ut.</p>
+      <summary>${heading}</summary>
+      <p class="match-breakdown-intro">Alle valgte kriterier vises. Manglende annonsedata merkes «Ikke oppgitt» og teller ikke som oppfylt.</p>
       <ul>${rows}</ul>
     </details>`;
 }
@@ -89,6 +94,7 @@ function hasEnoughPreferences(profile) {
     Boolean(profile.occupation),
     Boolean(profile.desired_move_in_date),
     Array.isArray(profile.priority_tags) && profile.priority_tags.length > 0,
+    Array.isArray(profile.preferred_amenities) && profile.preferred_amenities.length > 0,
     Boolean(profile.search_location),
     String(profile.max_transit_minutes ?? '').trim() !== ''
       && Number.isFinite(Number(profile.max_transit_minutes)) && Number(profile.max_transit_minutes) >= 0,
@@ -107,9 +113,26 @@ function renderSkeletons(count = 6) {
 function hasActiveFilters(filters = {}) {
   return Boolean(
     filters.city || filters.maxPrice || filters.moveInDate || filters.propertyType
-    || filters.preferredOccupation || filters.maxTransitMinutes || filters.schoolName
+    || filters.preferredOccupation || String(filters.maxTransitMinutes ?? '').trim() || filters.schoolName
     || filters.amenities?.length || filters.lifestyleTags?.length,
   );
+}
+
+function listingDetailUrl(listingId, { analysis = false } = {}) {
+  const pairs = [['id', String(listingId)]];
+  const forwardedKeys = [
+    'city', 'maxPrice', 'moveInDate', 'propertyType', 'preferredOccupation',
+    'maxTransitMinutes', 'schoolName', 'schoolLat', 'schoolLon',
+  ];
+  forwardedKeys.forEach((key) => {
+    const value = currentFilters[key];
+    if (value !== null && value !== undefined && String(value).trim()) pairs.push([key, String(value)]);
+  });
+  ['amenities', 'lifestyleTags'].forEach((key) => {
+    (Array.isArray(currentFilters[key]) ? currentFilters[key] : []).forEach((value) => pairs.push([key, String(value)]));
+  });
+  const query = pairs.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+  return `listing-detail.html?${query}${analysis ? '#ai-check' : ''}`;
 }
 
 function renderEmptyState(filters) {
@@ -134,15 +157,21 @@ function cardTemplate(listing) {
   const featuredBadge = isEffectivelyFeatured(listing) ? `
     <span class="absolute top-3 left-3 z-10 bg-primary-600 text-white text-[11px] font-semibold pl-2 pr-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">${STAR_ICON} Fremhevet · kjøpt</span>` : '';
   const matchCriteria = Number(listing._match?.criteria) || 0;
+  const verifiedCriteria = Number(listing._match?.verifiedCriteria ?? matchCriteria) || 0;
+  const unknownCriteria = Number(listing._match?.unknownCriteria) || 0;
   const matchCriteriaLabel = matchCriteria === 1 ? '1 kriterium' : `${matchCriteria} kriterier`;
   const matchLabel = listing._match?.isSchoolOnly ? 'nærhetsmatch' : 'match';
   const matchTitle = [
-    matchCriteria ? `Basert på ${matchCriteriaLabel}` : '',
+    matchCriteria ? `Kontrollert ${verifiedCriteria} av ${matchCriteriaLabel}` : '',
+    unknownCriteria ? `${unknownCriteria} ${unknownCriteria === 1 ? 'opplysning mangler' : 'opplysninger mangler'}` : '',
     listing._match?.confidence === 'limited' ? 'Begrenset grunnlag' : '',
     listing._match?.explanation || '',
   ].filter(Boolean).join(' · ');
-  const matchBadge = typeof listing._match?.score === 'number' ? `
-    <span class="absolute top-3 right-3 z-10 bg-white/95 text-primary-700 text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm" title="${escapeHtml(matchTitle)}">${listing._match.score}% ${matchLabel}</span>` : '';
+  const matchBadge = typeof listing._match?.score === 'number'
+    ? `<span class="absolute top-3 right-3 z-10 bg-white/95 text-primary-700 text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm" title="${escapeHtml(matchTitle)}">${listing._match.score}% ${matchLabel}</span>`
+    : listing._match && matchCriteria
+      ? `<span class="match-unverified-badge" title="${escapeHtml(matchTitle)}">Kan ikke verifiseres</span>`
+      : '';
   const preferencePrompt = listing._needsPreferences ? `
     <a href="dashboard.html#preferences" class="inline-block text-xs font-semibold text-primary-700 hover:underline mt-2">Fullfør preferansene dine</a>` : '';
   const visibleExplanation = String(listing._match?.explanation || '')
@@ -150,7 +179,7 @@ function cardTemplate(listing) {
     .filter((item) => !item.includes(' km fra '))
     .join(' · ');
   const explanation = visibleExplanation ? `<p class="text-xs text-mist mt-2 line-clamp-2">${escapeHtml(visibleExplanation)}</p>` : '';
-  const matchBasis = matchCriteria ? `<p class="mt-1 text-[11px] text-mist/80">Basert på ${escapeHtml(matchCriteriaLabel)}${listing._match?.confidence === 'limited' ? ' · begrenset grunnlag' : ''}</p>` : '';
+  const matchBasis = matchCriteria ? `<p class="mt-1 text-[11px] text-mist/80">Kontrollert ${verifiedCriteria} av ${escapeHtml(matchCriteriaLabel)}${unknownCriteria ? ` · ${unknownCriteria} ikke oppgitt` : ''}${listing._match?.confidence === 'limited' ? ' · begrenset grunnlag' : ''}</p>` : '';
   const schoolDistance = Number.isFinite(listing._match?.schoolDistanceKm) ? `
     <p class="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#EAF8F0] px-2 py-1 text-[11px] font-semibold text-[#207A45]" title="Omtrentlig luftlinje fra området i annonsen, ikke reisetid">
       ${PIN_ICON}<span>${escapeHtml(formatDistance(listing._match.schoolDistanceKm))} fra ${escapeHtml(listing._schoolName || 'valgt skole')}</span>
@@ -175,11 +204,14 @@ function cardTemplate(listing) {
       ? '<span class="text-[10px] font-semibold text-[#5A3EC2] bg-[#F4F2FF] px-2 py-0.5 rounded-full">✓ Utdannings-e-post</span>' : '',
   ].join('');
   const matchBreakdown = matchBreakdownTemplate(listing._match);
+  const detailUrl = escapeHtml(listingDetailUrl(listing.id));
+  const analysisUrl = escapeHtml(listingDetailUrl(listing.id, { analysis: true }));
+  const analysisLink = listing._example ? '' : `<a href="${analysisUrl}" class="text-xs font-semibold text-primary-700 hover:underline">AI- og kartkontroll</a>`;
 
   return `
     <article class="listing-card bg-white rounded-2xl overflow-hidden border border-line hover:shadow-lg hover:shadow-ink/5 transition-all relative">
       ${listing._example ? '<span class="example-badge">Eksempel</span>' : featuredBadge}${matchBadge}
-      <a href="listing-detail.html?id=${encodeURIComponent(listing.id)}" class="group block">
+      <a href="${detailUrl}" class="group block">
         <div class="h-44 overflow-hidden bg-primary-50">
           ${listing._example
             ? `<div class="w-full h-full" data-property-art="${escapeHtml(listing._art)}" role="img" aria-label="Illustrasjonsbilde av en eksempelbolig"></div>`
@@ -202,7 +234,7 @@ function cardTemplate(listing) {
       </a>
       ${matchBreakdown}
       <div class="px-4 pb-4 flex items-center justify-between gap-3">
-        <span>${listing._example && !listing._match ? '<a href="#filter-form" class="text-sm text-primary-700 font-semibold">Velg preferanser for match</a>' : preferencePrompt}</span>
+        <span class="flex flex-wrap items-center gap-3">${analysisLink}${listing._example && !listing._match ? '<a href="#filter-form" class="text-sm text-primary-700 font-semibold">Velg preferanser for match</a>' : preferencePrompt}</span>
         <button type="button" data-share-example="${listing._example === true}" data-share-listing="${escapeHtml(listing.id)}" data-share-title="${title}" data-share-city="${city}" data-share-price="${escapeHtml(listing.price)}" class="listing-share-button" aria-label="Del ${title}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
           Del
@@ -286,7 +318,7 @@ function sanitizeSearchTerm(value) {
 function applyFilters(query, filters) {
   for (const part of locationSearchParts(filters.city)) {
     const locationTerm = sanitizeSearchTerm(part);
-    if (locationTerm) query = query.or(`city.ilike.%${locationTerm}%,area.ilike.%${locationTerm}%`);
+    if (locationTerm) query = query.or(`city.ilike.${locationTerm},area.ilike.${locationTerm}`);
   }
   if (filters.maxPrice) query = query.lte('price', Number(filters.maxPrice));
   if (filters.moveInDate) query = query.or(`move_in_date.is.null,move_in_date.lte.${filters.moveInDate}`);
@@ -294,7 +326,7 @@ function applyFilters(query, filters) {
   if (filters.preferredOccupation && ['student', 'jobb', 'annet'].includes(filters.preferredOccupation)) {
     query = query.or(`preferred_occupations.eq.{},preferred_occupations.cs.{${filters.preferredOccupation}}`);
   }
-  if (filters.maxTransitMinutes) query = query.lte('transit_minutes', Number(filters.maxTransitMinutes));
+  if (String(filters.maxTransitMinutes ?? '').trim() !== '') query = query.lte('transit_minutes', Number(filters.maxTransitMinutes));
   if (filters.amenities?.length) query = query.contains('amenities', filters.amenities);
   if (filters.lifestyleTags?.length) query = query.contains('lifestyle_tags', filters.lifestyleTags);
   return query;
@@ -487,10 +519,13 @@ export async function populateCitySuggestions() {
   const datalist = document.getElementById('city-suggestions');
   if (!datalist) return;
   const commonCities = ['Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Tromsø', 'Kristiansand', 'Ås', 'Bodø', 'Drammen', 'Fredrikstad'];
-  let { data, error } = await supabase.from('listings').select('city').eq('status', 'active').limit(500);
+  let { data, error } = await supabase.from('listings').select('city, area').eq('status', 'active').limit(500);
   if (error && isMissingColumnError(error)) {
-    ({ data } = await supabase.from('listings').select('city').limit(500));
+    ({ data } = await supabase.from('listings').select('city, area').limit(500));
   }
-  const cities = [...new Set([...commonCities, ...(data || []).map((row) => row.city).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'nb'));
-  datalist.innerHTML = cities.map((city) => `<option value="${escapeHtml(city)}"></option>`).join('');
+  const locations = [...new Set([
+    ...commonCities,
+    ...(data || []).flatMap((row) => [row.city, row.area && row.city ? `${row.area}, ${row.city}` : row.area]).filter(Boolean),
+  ])].sort((a, b) => a.localeCompare(b, 'nb'));
+  datalist.innerHTML = locations.map((location) => `<option value="${escapeHtml(location)}"></option>`).join('');
 }

@@ -1,4 +1,4 @@
-import { computeMatch, compareBestMatch, compareNearestSchool, matchesLocation } from './match.js';
+import { computeMatch, compareBestMatch, compareNearestSchool, matchesLocation } from './match.js?v=20260912-2';
 
 // Local, explicitly fictional examples. Never insert these into the live database
 // or give them a user_id: there is no landlord to contact or payment to start.

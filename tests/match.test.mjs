@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, primaryLocationSearchTerm, schoolProximityRatio } from '../match.js';
+import { buildMatchPreferences, computeMatch, compareBestMatch, compareNearestSchool, schoolProximityRatio } from '../match.js';
 
 const baseListing = {
   id: 'a',
@@ -33,7 +33,7 @@ assert.deepEqual(
     { label: 'Boligtype', percentage: 100 },
     { label: 'Hverdag', percentage: 100 },
     { label: 'Innflytting', percentage: 100 },
-    { label: 'Ønsker', percentage: 100 },
+    { label: 'Boligkvaliteter', percentage: 100 },
   ],
   'Alle vurderte kriterier skal følge resultatet som en forståelig forklaring',
 );
@@ -42,7 +42,19 @@ const missingListingData = computeMatch(
   { ...baseListing, property_type: null, lifestyle_tags: [], amenities: [] },
   { monthly_budget_max: 7500, preferred_property_types: ['hybel'], priority_tags: ['stort-rom'] },
 );
-assert.equal(missingListingData, null, 'Manglende annonsedata skal ikke telle positivt eller negativt');
+assert.equal(missingListingData.unknownCriteria, 1, 'Manglende annonsedata skal registreres som ukjent');
+assert.deepEqual(
+  missingListingData.breakdown.find(({ label }) => label === 'Boligtype'),
+  {
+    label: 'Boligtype',
+    detail: 'Boligtype er ikke oppgitt i annonsen',
+    percentage: null,
+    weight: 25,
+    status: 'unknown',
+  },
+  'Et manglende felt skal vises som ukjent og ikke som oppfylt',
+);
+assert.ok(missingListingData.score < 100, 'Manglende annonsedata skal ikke blåse opp matchprosenten');
 
 const unrestricted = computeMatch(baseListing, { monthly_budget_max: 7500, occupation: 'student' });
 assert.equal(unrestricted.score, 100, 'Tom yrkesliste betyr alle er velkomne');
@@ -85,12 +97,16 @@ assert.deepEqual({
   budget: filteredPreferences.monthly_budget_max,
   types: filteredPreferences.preferred_property_types,
   tags: filteredPreferences.priority_tags,
+  amenities: filteredPreferences.preferred_amenities,
+  lifestyle: filteredPreferences.preferred_lifestyle_tags,
   transit: filteredPreferences.max_transit_minutes,
   location: filteredPreferences.search_location,
 }, {
   budget: 8000,
   types: ['leilighet'],
-  tags: ['treningssenter', 'rolig-miljo'],
+  tags: ['rolig-miljo'],
+  amenities: ['treningssenter'],
+  lifestyle: ['rolig-miljo'],
   transit: 5,
   location: 'Oslo',
 }, 'Aktive filtre skal overstyre tilsvarende lagrede preferanser');
@@ -103,6 +119,88 @@ const filteredMatch = computeMatch({
 }, filteredPreferences);
 assert.equal(filteredMatch.score, 100, 'En annonse som oppfyller alle valgte filtre skal få korrekt full match');
 assert.equal(filteredMatch.confidence, 'high', 'Fem eller flere vurderte kriterier skal gi høyt datagrunnlag');
+
+const fiveCriterionFilters = {
+  city: 'Majorstuen, Oslo',
+  maxTransitMinutes: '8',
+  amenities: ['matbutikk', 'kollektivtransport'],
+  lifestyleTags: ['rolig-miljo', 'stort-rom'],
+};
+const fiveCriterionPreferences = buildMatchPreferences(null, fiveCriterionFilters);
+const selectedSchool = {
+  name: 'Universitetet i Oslo',
+  latitude: 59.9375,
+  longitude: 10.71905,
+};
+const fiveCriterionListing = {
+  city: 'Oslo',
+  area: 'Majorstuen',
+  transit_minutes: 5,
+  amenities: ['matbutikk', 'kollektivtransport'],
+  lifestyle_tags: ['rolig-miljo', 'stort-rom'],
+  location_lat: 59.9375,
+  location_lon: 10.71905,
+};
+
+assert.deepEqual(fiveCriterionPreferences.preferred_amenities, fiveCriterionFilters.amenities);
+assert.deepEqual(fiveCriterionPreferences.preferred_lifestyle_tags, fiveCriterionFilters.lifestyleTags);
+
+const fiveCriterionMatch = computeMatch(fiveCriterionListing, fiveCriterionPreferences, { school: selectedSchool });
+assert.equal(fiveCriterionMatch.score, 100);
+assert.equal(fiveCriterionMatch.criteria, 5);
+assert.equal(fiveCriterionMatch.verifiedCriteria, 5);
+assert.equal(fiveCriterionMatch.unknownCriteria, 0);
+assert.deepEqual(
+  fiveCriterionMatch.breakdown.map(({ label, percentage, status }) => ({ label, percentage, status })),
+  [
+    { label: 'Område', percentage: 100, status: 'matched' },
+    { label: 'Kollektivtransport', percentage: 100, status: 'matched' },
+    { label: 'Fasiliteter', percentage: 100, status: 'matched' },
+    { label: 'Boligkvaliteter', percentage: 100, status: 'matched' },
+    { label: 'Skoleavstand', percentage: 100, status: 'matched' },
+  ],
+  'Område, transport, fasiliteter, boligkvaliteter og skole skal vurderes separat',
+);
+
+const criterion = (match, label) => match.breakdown.find((item) => item.label === label);
+assert.equal(
+  criterion(computeMatch({ ...fiveCriterionListing, amenities: [] }, fiveCriterionPreferences, { school: selectedSchool }), 'Fasiliteter').percentage,
+  0,
+  'Manglende valgte fasiliteter skal slå ut uavhengig av boligkvalitetene',
+);
+assert.equal(
+  criterion(computeMatch({ ...fiveCriterionListing, lifestyle_tags: [] }, fiveCriterionPreferences, { school: selectedSchool }), 'Boligkvaliteter').percentage,
+  0,
+  'Manglende valgte boligkvaliteter skal slå ut uavhengig av fasilitetene',
+);
+assert.equal(
+  criterion(computeMatch({ ...fiveCriterionListing, area: 'Grünerløkka' }, fiveCriterionPreferences, { school: selectedSchool }), 'Område').percentage,
+  0,
+  'Feil delområde skal gi et eget områdeavvik',
+);
+assert.equal(
+  criterion(computeMatch({ ...fiveCriterionListing, transit_minutes: 12 }, fiveCriterionPreferences, { school: selectedSchool }), 'Kollektivtransport').percentage,
+  50,
+  'Transporttid over ønsket grense skal gi en egen delscore',
+);
+
+const unknownFiveCriteria = computeMatch({}, fiveCriterionPreferences, { school: selectedSchool });
+assert.equal(unknownFiveCriteria.score, null);
+assert.equal(unknownFiveCriteria.criteria, 5);
+assert.equal(unknownFiveCriteria.verifiedCriteria, 0);
+assert.equal(unknownFiveCriteria.unknownCriteria, 5);
+assert.equal(unknownFiveCriteria.verificationCoverage, 0);
+assert.deepEqual(
+  unknownFiveCriteria.breakdown.map(({ label, percentage, status }) => ({ label, percentage, status })),
+  [
+    { label: 'Område', percentage: null, status: 'unknown' },
+    { label: 'Kollektivtransport', percentage: null, status: 'unknown' },
+    { label: 'Fasiliteter', percentage: null, status: 'unknown' },
+    { label: 'Boligkvaliteter', percentage: null, status: 'unknown' },
+    { label: 'Skoleavstand', percentage: null, status: 'unknown' },
+  ],
+  'Ingen valgte kriterier skal forsvinne når annonsen mangler data',
+);
 
 const compoundLocation = computeMatch({
   ...baseListing,
@@ -119,7 +217,6 @@ const transliteratedLocation = computeMatch({ ...baseListing, city: 'Ås' }, {
   monthly_budget_max: 8000,
 });
 assert.equal(transliteratedLocation.score, 100, 'Norske bokstaver skal kunne matches med vanlig tastatur');
-assert.equal(primaryLocationSearchTerm('Majorstuen, Oslo'), 'Majorstuen', 'Sammensatt stedsfilter skal søke på det mest presise området');
 
 const filterMismatch = computeMatch({
   ...baseListing,
@@ -140,7 +237,10 @@ const missingTransit = computeMatch(
   { ...baseListing, transit_minutes: null },
   { monthly_budget_max: 8000, max_transit_minutes: 5 },
 );
-assert.equal(missingTransit, null, 'Manglende kollektivdata skal ikke feilaktig behandles som 0 minutter');
+assert.equal(missingTransit.unknownCriteria, 1);
+assert.equal(criterion(missingTransit, 'Kollektivtransport').status, 'unknown');
+assert.equal(criterion(missingTransit, 'Kollektivtransport').percentage, null);
+assert.ok(missingTransit.score < 100, 'Manglende kollektivdata skal ikke feilaktig behandles som 0 minutter');
 
 const partiallyOverBudget = computeMatch(
   { ...baseListing, price: 9000 },
@@ -164,19 +264,25 @@ for (const budget of [1, 5000, 8000, 1000000]) {
   }
 }
 
-assert.equal(computeMatch(baseListing, {}, {
+const invalidSchoolCoordinates = computeMatch(baseListing, {}, {
   school: { name: 'Ugyldig punkt', latitude: 91, longitude: 10 },
-}), null, 'Ugyldige skolekoordinater skal ikke gi en nærhetsmatch');
+});
+assert.equal(invalidSchoolCoordinates, null, 'Ugyldige skolekoordinater skal ikke gi en falsk nærhetsmatch');
 assert.equal(schoolProximityRatio(null), null, 'Manglende avstand skal ikke tolkes som 0 km');
-assert.equal(computeMatch({ ...baseListing, location_lat: null, location_lon: null }, {}, {
+const missingSchoolCoordinates = computeMatch({ ...baseListing, location_lat: null, location_lon: null }, {}, {
   school: { name: 'Universitetet i Oslo', latitude: 59.9375, longitude: 10.71905 },
-}), null, 'Annonser uten koordinater skal ikke krasje eller få falsk skolenærhet');
+});
+assert.equal(missingSchoolCoordinates.score, null);
+assert.equal(missingSchoolCoordinates.unknownCriteria, 1);
+assert.equal(criterion(missingSchoolCoordinates, 'Skoleavstand').status, 'unknown', 'Annonser uten koordinater skal ikke få falsk skolenærhet');
 
 const duplicateFilterTags = buildMatchPreferences({}, {
   amenities: ['matbutikk', 'matbutikk'],
-  lifestyleTags: ['rolig-miljo', 'matbutikk'],
+  lifestyleTags: ['rolig-miljo', 'rolig-miljo'],
 });
-assert.deepEqual(duplicateFilterTags.priority_tags, ['matbutikk', 'rolig-miljo'], 'Duplikate filterverdier skal normaliseres før beregning');
+assert.deepEqual(duplicateFilterTags.preferred_amenities, ['matbutikk']);
+assert.deepEqual(duplicateFilterTags.preferred_lifestyle_tags, ['rolig-miljo']);
+assert.deepEqual(duplicateFilterTags.priority_tags, ['rolig-miljo'], 'Duplikate filterverdier skal normaliseres innen riktig kategori');
 
 const sameScoreThin = { ...baseListing, _match: { score: 100, criteria: 2 }, created_at: '2026-08-22T00:00:00Z' };
 const sameScoreSolid = { ...baseListing, id: 'solid', _match: { score: 100, criteria: 6 }, created_at: '2026-01-01T00:00:00Z' };
@@ -186,4 +292,4 @@ const feedSource = readFileSync(new URL('../feed.js', import.meta.url), 'utf8');
 assert.match(feedSource, /rankAllMatchResults[\s\S]+MAX_CLIENT_RANKED_RESULTS[\s\S]+data\.sort\(compareBestMatch\)[\s\S]+data = data\.slice/, 'Beste match skal rangeres før paginering');
 assert.match(feedSource, /rankingIsCapped[\s\S]+Smart Match rangerer de \$\{MAX_CLIENT_RANKED_RESULTS\} nyeste ordinære treffene/, 'Store resultatsett skal opplyse om rangeringsgrensen');
 
-console.log('Smart Match: 29 tester besto.');
+console.log('Smart Match-regresjoner besto.');

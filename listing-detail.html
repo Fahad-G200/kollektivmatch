@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
 <title>Annonsedetaljer – KollektivMatch</title>
 <meta id="page-description" name="description" content="Se boligannonsen og kontakt annonsens eier på KollektivMatch." />
-<link rel="stylesheet" href="css/tailwind.css?v=20260827-1" />
+<link rel="stylesheet" href="css/tailwind.css?v=20260912-1" />
 <link rel="stylesheet" href="css/style.css?v=20260825-1" />
 </head>
 <body class="bg-[#FAF9F6] text-[#211C33] font-sans antialiased min-h-screen flex flex-col justify-between">
@@ -117,6 +117,63 @@
               <div id="listing-rent-includes" class="flex flex-wrap gap-2"></div>
             </div>
           </div>
+
+          <section id="ai-check" class="scroll-mt-24 bg-white rounded-3xl border border-[#E7E3F5] p-6 md:p-8 space-y-5 shadow-sm" aria-labelledby="ai-check-title">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-[#6C4CE0]">Frivillig betakontroll</p>
+                <h3 id="ai-check-title" class="font-display font-bold text-lg text-[#211C33] mt-1">Femdelt boligkontroll</h3>
+              </div>
+              <span class="rounded-full bg-[#F4F2FF] px-3 py-1 text-xs font-semibold text-[#5A3EC2]">På forespørsel</span>
+            </div>
+            <p class="text-sm leading-relaxed text-[#6B667E]">Område, transport, fasiliteter, boligkvalitet og skole vises hver for seg. Først kontrolleres valgene mot feltene i annonsen. Deretter kan en innlogget bruker starte bilde- og kartkontroll. Resultatene er veiledende og endrer ikke Smart Match-prosenten.</p>
+
+            <div class="rounded-2xl border border-[#E7E3F5] bg-[#FAF9F6] p-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h4 class="text-sm font-bold text-[#211C33]">Kontrollert fra annonsefeltene</h4>
+                <span id="listing-field-match-summary" class="text-xs font-semibold text-[#6C4CE0]">Henter kontrollgrunnlag …</span>
+              </div>
+              <p id="listing-analysis-context" class="mt-2 text-xs leading-relaxed text-[#6B667E]"></p>
+              <ul id="listing-field-match" class="mt-3 space-y-2"></ul>
+            </div>
+
+            <div class="rounded-2xl border border-[#DAD0FF] bg-[#F4F2FF]/60 p-4 space-y-3">
+              <p id="listing-analysis-disclosure" class="text-xs leading-relaxed text-[#6B667E]">Kontrollen starter aldri automatisk.</p>
+              <button id="run-listing-analysis" type="button" class="inline-flex items-center justify-center rounded-xl bg-[#6C4CE0] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#5A3EC2] disabled:cursor-not-allowed disabled:opacity-60">Kjør AI- og kartkontroll</button>
+              <p id="listing-analysis-status" class="text-xs text-[#6B667E]" role="status" aria-live="polite">Kontrollen er ikke kjørt.</p>
+            </div>
+
+            <div id="listing-analysis-results" class="space-y-4" tabindex="-1">
+              <div class="grid gap-4 md:grid-cols-2">
+                <section class="rounded-2xl border border-[#E7E3F5] p-4" aria-labelledby="area-check-title">
+                  <h4 id="area-check-title" class="text-sm font-bold text-[#211C33]">1. Område</h4>
+                  <div id="listing-area-analysis" class="mt-3 text-sm text-[#6B667E]">Henter annonsefelt …</div>
+                  <p class="mt-3 text-xs leading-relaxed text-[#6B667E]">Kontrolleres mot by og område som annonsøren har oppgitt.</p>
+                </section>
+                <section class="rounded-2xl border border-[#E7E3F5] p-4" aria-labelledby="transport-check-title">
+                  <h4 id="transport-check-title" class="text-sm font-bold text-[#211C33]">2. Transport</h4>
+                  <div id="listing-transport-field-analysis" class="mt-3 text-sm text-[#6B667E]">Henter annonsefelt …</div>
+                  <div id="listing-route-analysis" class="mt-3 border-t border-[#E7E3F5] pt-3 text-sm text-[#6B667E]">Kartkontrollen er ikke kjørt.</div>
+                </section>
+                <section class="rounded-2xl border border-[#E7E3F5] p-4" aria-labelledby="amenity-check-title">
+                  <h4 id="amenity-check-title" class="text-sm font-bold text-[#211C33]">3. Fasiliteter</h4>
+                  <div id="listing-amenity-field-analysis" class="mt-3 text-sm text-[#6B667E]">Henter annonsefelt …</div>
+                  <div id="listing-amenity-analysis" class="mt-3 border-t border-[#E7E3F5] pt-3 text-sm text-[#6B667E]">Kartkontrollen er ikke kjørt.</div>
+                </section>
+                <section class="rounded-2xl border border-[#E7E3F5] p-4" aria-labelledby="quality-check-title">
+                  <h4 id="quality-check-title" class="text-sm font-bold text-[#211C33]">4. Boligkvalitet</h4>
+                  <div id="listing-quality-field-analysis" class="mt-3 text-sm text-[#6B667E]">Henter annonsefelt …</div>
+                  <div id="listing-image-analysis" class="mt-3 border-t border-[#E7E3F5] pt-3 text-sm text-[#6B667E]">Bildekontrollen er ikke kjørt.</div>
+                </section>
+                <section class="rounded-2xl border border-[#E7E3F5] p-4 md:col-span-2" aria-labelledby="school-check-title">
+                  <h4 id="school-check-title" class="text-sm font-bold text-[#211C33]">5. Skole</h4>
+                  <div id="listing-school-field-analysis" class="mt-3 text-sm text-[#6B667E]">Henter annonsefelt …</div>
+                  <div id="listing-school-route-analysis" class="mt-3 border-t border-[#E7E3F5] pt-3 text-sm text-[#6B667E]">Kartkontrollen er ikke kjørt.</div>
+                </section>
+              </div>
+              <p id="listing-analysis-notice" class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">Hver kontroll viser «ikke valgt» eller «kan ikke fastslås» når grunnlaget mangler. Ingenting blir behandlet som et treff uten data.</p>
+            </div>
+          </section>
         </div>
 
         <!-- Kontaktboks -->
@@ -169,6 +226,6 @@
   </footer>
 
   <div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col items-end" aria-live="polite"></div>
-  <script type="module" src="listing-detail.js?v=20260825-2"></script>
+  <script type="module" src="listing-detail.js?v=20260912-2"></script>
 </body>
 </html>

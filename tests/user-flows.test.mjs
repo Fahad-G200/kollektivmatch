@@ -37,6 +37,8 @@ const paymentResult = read('boost-payment-result.js');
 const storage = read('storage-utils.js');
 const config = read('supabase-config.js');
 const app = read('app.js');
+const index = read('index.html');
+const resetHtml = read('reset-password.html');
 const allBrowserJs = readdirSync(root)
   .filter((name) => name.endsWith('.js'))
   .map(read)
@@ -53,7 +55,11 @@ assert.match(callback, /exchangeCodeForSession/);
 assert.match(callback, /clearSensitiveUrl\(\)/);
 assert.doesNotMatch(callback, /getSession\(\)/);
 assert.match(recovery, /type: 'recovery'/);
-assert.match(recovery, /password\.length < 12/);
+assert.match(app, /passwordField\.value\.length < 6/);
+assert.match(index, /id="register-password"[^>]+minlength="6"/);
+assert.match(recovery, /password\.length < 6/);
+assert.match(resetHtml, /id="new-password"[^>]+minlength="6"/);
+assert.match(resetHtml, /id="confirm-new-password"[^>]+minlength="6"/);
 assert.match(recovery, /await supabase\.auth\.signOut\(\)/);
 assert.doesNotMatch(recovery, /getSession\(\)/);
 

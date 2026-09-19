@@ -10,7 +10,7 @@ nettleseren kjører ikke produktkode fra et tredjeparts-CDN.
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse sytten migreringene i rekkefølge:
+skal du kjøre disse tjueto migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -46,12 +46,24 @@ skal du kjøre disse sytten migreringene i rekkefølge:
 
 `migrations/2026-09-08_security_definer_execute_grants.sql`
 
-Migreringene er ikke-destruktive og legger til felter, validering, funksjoner,
-rettigheter og policyer uten å slette eksisterende data. `schema.sql` er nå kun
-en sikker veiviser. Ikke kjør `schema_fresh_install_DELETES_ALL_DATA.sql` på en
-eksisterende database; den filen inneholder med hensikt `DROP TABLE` for en helt
-ny installasjon. Ved en tom førstegangsinstallasjon kjøres fresh-install-filen
-først, deretter de daterte migreringene i rekkefølgen over.
+`migrations/2026-09-11_match_preference_coverage.sql`
+
+`migrations/2026-09-12_ai_listing_checks.sql`
+
+`migrations/2026-09-12_external_listing_analysis.sql`
+
+`migrations/2026-09-12_ai_listing_retention_cron.sql`
+
+`migrations/2026-09-12_external_listing_analysis_retention_cron.sql`
+
+De tjue migreringene som ikke gjelder Cron er additive og legger til felter,
+validering, funksjoner, rettigheter og policyer uten å slette eksisterende
+bruker- eller annonsedata. De to Cron-migreringene installerer bare slettejobber
+for private analysekvoter. `schema.sql` er nå kun en sikker veiviser. Ikke kjør
+`schema_fresh_install_DELETES_ALL_DATA.sql` på en eksisterende database; den
+filen inneholder med hensikt `DROP TABLE` for en helt ny installasjon. Ved en tom
+førstegangsinstallasjon kjøres fresh-install-filen først, deretter de daterte
+migreringene i rekkefølgen over.
 
 Frontend kan midlertidig publisere mot det gamle skjemaet med forsidebildet,
 men migreringene må kjøres for bildegalleri, nye boligfelt, Smart Match,
@@ -97,16 +109,24 @@ CDN-kjøring brukes ikke.
    `migrations/2026-08-31_contact_privacy_hardening.sql` og
    `migrations/2026-09-01_reporting_hardening.sql`,
    `migrations/2026-09-07_public_listing_access.sql` og
-   `migrations/2026-09-07_cabin_property_type.sql` og
-   `migrations/2026-09-08_security_definer_execute_grants.sql`. Alle er
-   additive og skal ikke slette eksisterende brukere eller annonser.
+   `migrations/2026-09-07_cabin_property_type.sql`,
+   `migrations/2026-09-08_security_definer_execute_grants.sql` og
+   `migrations/2026-09-11_match_preference_coverage.sql` og
+   `migrations/2026-09-12_ai_listing_checks.sql` og
+   `migrations/2026-09-12_external_listing_analysis.sql`. Aktiver deretter
+   **Cron** under **Integrations** i Supabase, og kjør
+   `migrations/2026-09-12_ai_listing_retention_cron.sql` og
+   `migrations/2026-09-12_external_listing_analysis_retention_cron.sql`.
+   Cron-migreringene feiler tydelig hvis Cron ikke er aktivert, og sletter kun
+   private analysekvotelogger. Ingen av migreringene sletter eksisterende
+   brukere eller annonser.
 3. Åpne **Authentication → URL Configuration**.
 4. Sett **Site URL** til den faktiske rotadressen. Lokalt kan dette være
-   `http://localhost:5500/`. I produksjon bruker du `<PRODUCTION_URL>/`.
+   `http://localhost:3000/`. I produksjon bruker du `<PRODUCTION_URL>/`.
 5. Legg inn følgende under **Redirect URLs**:
 
-   - `http://localhost:5500/auth-callback.html`
-   - `http://localhost:5500/reset-password.html`
+   - `http://localhost:3000/auth-callback.html`
+   - `http://localhost:3000/reset-password.html`
    - `<PRODUCTION_URL>/auth-callback.html`
    - `<PRODUCTION_URL>/reset-password.html`
 
@@ -135,8 +155,8 @@ CDN-kjøring brukes ikke.
    Bekreft også `listing-videos`, som tillater én offentlig annonsevideo på maks
    50 MB i MP4-, WebM- eller MOV-format, lagret i brukerens egen mappe.
 9. Under **Authentication → Password Security** setter du minimumslengde til
-   minst 12 tegn. Aktiver lekkede-passord-kontroll dersom Supabase-planen støtter
-   det.
+   6 tegn, slik at backend og skjemaene har samme krav. Aktiver
+   lekkede-passord-kontroll dersom Supabase-planen støtter det.
 10. Kontroller Auth-rate limits, aktiver CAPTCHA på registrering/innlogging ved
     produksjonsbruk, og sett opp en egnet SMTP-leverandør med SPF, DKIM og DMARC.
 11. Opprett moderatorer ved å sette `app_metadata.role` til `moderator` eller
@@ -317,6 +337,80 @@ hos Google Cloud, og teste både lokal og publisert redirect. Sett deretter
 skal legges i frontend. Før aktivering må OAuth-flyten også få et eget steg der
 brukeren godtar gjeldende vilkår; e-postskjemaets avkryssing dekker ikke OAuth.
 
+## Frivillig AI- og Google Maps-kontroll
+
+Annonsesiden har en manuell tilleggskontroll for interne KollektivMatch-
+annonser. Den viser først Smart Match fra alle valgte, strukturerte annonsefelt.
+Detaljsiden viser alltid fem separate kontrollområder:
+
+- område mot annonsens strukturerte by- og områdefelt;
+- transport mot annonsefeltet og, på forespørsel, Google Routes-gangtid til
+  nærmeste Google Places-kollektivtreff;
+- fasiliteter mot annonsefeltet og karttreff innen 1500 meter;
+- boligkvalitet mot annonsefeltet og, når en bildevurderbar kvalitet er valgt og
+  annonsøren har samtykket, synlige tegn i opptil seks godkjente bilder;
+- skole som omtrentlig luftlinje og, på forespørsel, en veiledende
+  kollektivrute fra Google Routes.
+
+Et kontrollområde som ikke er valgt vises eksplisitt som «Ikke valgt», mens
+manglende grunnlag vises som «Kan ikke fastslås». Det gjør at ett enkelt valg
+fortsatt blir kontrollert selv om minst to valg kreves for en matchprosent.
+
+AI- og kartresultatene endrer aldri Smart Match-prosenten. Usikre eller
+manglende funn vises som «Kan ikke fastslås». Bildekontroll er avslått som
+standard og krever at annonsøren slår den på i publiserings-/redigeringsskjemaet.
+Den generiske bildecachen slettes ved nye bilder, avslått tillatelse eller
+slettet annonse. Google-treff og ruter lagres ikke i databasen.
+
+Aktivering i et testprosjekt:
+
+1. Kjør `migrations/2026-09-12_ai_listing_checks.sql` etter de øvrige
+   migreringene. Den legger til eierens valg, en privat generisk bildecache og
+   en atomisk kvote på 6 kontroller per time og 20 per døgn per bruker.
+2. Aktiver **Cron** under **Integrations** i Supabase og kjør
+   `migrations/2026-09-12_ai_listing_retention_cron.sql`. Kontroller deretter
+   jobben med:
+
+   ```sql
+   select jobname, schedule, command, active
+   from cron.job
+   where jobname = 'purge-listing-analysis-requests';
+   ```
+
+3. Opprett en OpenAI API-nøkkel og velg en modell som støtter bilder og
+   strukturerte svar. Aktiver Places API (New) og Routes API i et Google Cloud-
+   testprosjekt. Bruk en egen servernøkkel begrenset til bare disse API-ene og,
+   når driftsmiljøet tillater det, Edge Function-utgående IP-er.
+4. Lag en lokal, git-ignorert fil, for eksempel `.env.analysis.local`, med:
+
+   ```text
+   OPENAI_API_KEY=...
+   OPENAI_VISION_MODEL=...
+   GOOGLE_MAPS_API_KEY=...
+   ```
+
+   For kontroll fra den lokale Vinext-serveren setter du i det samme lokale
+   testprosjektet `APP_BASE_URL=http://localhost:3000` og
+   `ALLOW_LOCAL_ORIGINS=true`. Ikke bruk disse lokalverdiene i produksjon;
+   produksjonsprosjektet skal ha eksakt HTTPS-origin og lokalflagget avslått.
+
+5. Sett Supabase-secrets og deploy den JWT-beskyttede funksjonen:
+
+   ```bash
+   supabase secrets set --env-file .env.analysis.local
+   supabase functions deploy analyze-listing-fit
+   supabase functions deploy analyze-external-listing
+   ```
+
+6. Rediger en testannonse, slå på «Tillat AI-bildekontroll», åpne annonsen som
+   en annen innlogget testbruker og kontroller både fullstendig, delvis og
+   utilgjengelig leverandørstatus. Følg med på API-kostnader og kvoter.
+
+Nøklene skal aldri legges i `supabase-config.js`, HTML eller nettleser-JavaScript.
+Serverfunksjonen godtar bare annonse-ID og tillatte preferanseverdier; den
+henter medieadressene fra databasen og avviser alle bilder utenfor annonsørens
+egen `listing-images`-mappe.
+
 ## Viktige funksjoner
 
 - Egen auth-callback håndterer `code`, implicit tokens, `token_hash`, utløpte
@@ -338,6 +432,10 @@ brukeren godtar gjeldende vilkår; e-postskjemaets avkryssing dekker ikke OAuth.
   stedsnavn-API. Valgt skole kan sortere annonser etter nærhet og inngå i den
   veiledende matchprosenten. Annonsen lagrer bare et omtrentlig område-/bypunkt,
   aldri gateadresse, og avstand vises som luftlinje – ikke reisetid.
+- Annonsedetaljen viderefører aktive søkepreferanser og viser alle kontrollerte
+  Smart Match-kriterier. Den frivillige serverfunksjonen kan i tillegg vise
+  generiske bildeobservasjoner, Google-fasiliteter og reisetid som egne kilder,
+  uten at disse blandes inn i prosenttallet.
 - Meldinger opprettes via `send_message`-RPC. Annonseeieren kan bare svare noen
   som allerede har startet en legitim samtale, og innhold kan ikke redigeres.
   Samtaledeltakere beholder tilgang når annonsen pauses eller blir utleid, og
@@ -377,6 +475,56 @@ skal derfor ikke aktiveres før KollektivMatch har en skriftlig avtale, FINN-org
 API-nøkkel og dokumentert rett til å vise de aktuelle annonsene. Hold nøkkelen i
 en serverfunksjon, aldri i frontend, og merk annonsenes kilde tydelig.
 
+Forsiden lager i stedet et preferansebasert utgående FINN-søk i
+`external-search.js`. Kontrollvisningen skiller mellom eksakte FINN-filtre,
+søkeord som ikke er verifisert, og kriterier som må bekreftes i hver annonse.
+Støttede boligtyper, makspris, innflyttingsmåned og enkelte sorteringer sendes
+som faktiske FINN-filtre. Sted og studentbolig sendes som søkeord, og vises også
+som uverifiserte der innholdet må kontrolleres per annonse. Skoleavstand,
+kollektivtransport, fasiliteter, ønsket hverdag og boligkvaliteter står i den
+samme kontrollisten når de er valgt.
+
+Kontrollisten betyr ikke at KollektivMatch har lest eller godkjent annonsen;
+hvert punkt er først merket «Må bekreftes». Valgene blir også gjort om til en
+søketekst som brukeren kan kopiere til Husleie.no, Hybel.no eller Facebook
+Marketplace. Ingen av sidene leses automatisk.
+
+Forsiden har i tillegg en separat, brukerinitiert «Kontrollert match (beta)» for
+én konkret FINN-annonse. Dette er ikke scraping eller en FINN-integrasjon:
+
+- FINN-lenken formatvalideres og brukes som deeplink, men hentes aldri av
+  klienten eller serverfunksjonen;
+- brukeren oppgir selv gateadresse, pris, boligtype, innflyttingsdato og ønsket
+  hverdag, og kan merke faste påstander fra annonsen;
+- nettleseren skalerer maksimalt tre bruker-valgte boligbilder til WebP;
+- `analyze-external-listing` geokoder adressen, kontrollerer nærmeste valgte
+  fasiliteter, gangtid til kollektivtransport og skoleavstand/-rute med Google,
+  og bruker OpenAI kun for valgte, synlige boligkvaliteter;
+- serveren beregner prosenten deterministisk med samme vekter som Smart Match.
+  AI får aldri beregne prosent, og ukjent inngår i nevneren med null poeng;
+- resultatet viser «Har», «Mangler eller delvis» og «Kan ikke fastslås», med
+  kilde per kriterium og en egen dekningsprosent;
+- lenke, finnkode, adresse, bilder, Google-resultat og analyseresultat lagres
+  ikke av KollektivMatch. En minimal privat kvotelogg lagrer bare bruker-ID og
+  tidspunkt i opptil omtrent 25 timer.
+
+Kjør `migrations/2026-09-12_external_listing_analysis.sql` før funksjonen
+deployes. Aktiver deretter Supabase Cron og kjør
+`migrations/2026-09-12_external_listing_analysis_retention_cron.sql` for
+uavhengig opprydding av kvoteloggen. Funksjonen godtar bare
+`multipart/form-data`, krever innlogging og
+samtykkeflagg, tillater maksimalt tre WebP-bilder på 2 MiB hver og har en atomisk
+kvote på 3 kontroller per time og 10 per døgn. Eksterne bilde-URL-er godtas
+aldri. `store: false` brukes hos OpenAI, men dette er ikke et løfte om null
+leverandøroppbevaring; sikkerhets-/misbrukslogger og et eventuelt ZDR-oppsett må
+dokumenteres før produksjon.
+
+Denne manuelle flyten gir heller ikke automatisk rett til å sende FINN-innhold
+til en tredjepart. Før produksjonslansering må virksomheten avklare skriftlig at
+brukeren og KollektivMatch har nødvendige rettigheter til de valgte bildene og
+den aktuelle behandlingen. Automatisk FINN-søk, bildehenting eller markedsfeed
+forblir sperret frem til en uttrykkelig avtale dekker dette.
+
 ## Produksjonssjekkliste for personvern og sikkerhet
 
 - Fyll inn behandlingsansvarlig, organisasjonsnummer, fysisk adresse og overvåket
@@ -399,6 +547,10 @@ en serverfunksjon, aldri i frontend, og merk annonsenes kilde tydelig.
   `profiles_public_fields_hardened` og `listings_owned_media_urls` i databasen.
 - Ikke legg til analyse eller markedsføringssporing uten egen vurdering og gyldig
   forhåndssamtykke. Nødvendig sesjonslagring alene trenger ikke et kunstig banner.
+- Før AI-/kartkontrollen aktiveres i produksjon: gjennomfør personvern- og
+  leverandørvurdering, inngå nødvendige avtaler, verifiser overføringsgrunnlag,
+  begrens begge API-nøkler og kvoter, og verifiser at Cron-jobben
+  `purge-listing-analysis-requests` er aktiv og fullfører uten feil.
 - Test RLS, Storage, meldingsbegrensning, eksport og sletting i et separat
   Supabase-testprosjekt. Verifiser spesielt at anonyme brukere ikke kan lese
   `contact_info`, private profilfelt, meldinger eller rapporter.
@@ -412,7 +564,8 @@ ligger i `docs/FIRST-LISTINGS-PLAN.md`.
 ```text
 kollektivmatch/
 ├── auth-callback.html / auth-callback.js
-├── index.html / app.js / auth.js / feed.js / match.js
+├── index.html / app.js / auth.js / feed.js / match.js / external-search.js
+├── listing-analysis.js
 ├── location-utils.js
 ├── create-listing.html / create-listing.js / storage-utils.js
 ├── listing-detail.html / listing-detail.js
@@ -431,6 +584,7 @@ kollektivmatch/
 ├── migrations/2026-08-23_vipps_account_verification.sql
 ├── migrations/2026-08-25_listing_video.sql
 ├── migrations/2026-08-25_school_proximity.sql
+├── migrations/2026-08-25_unlimited_listing_images.sql
 ├── migrations/2026-08-25_security_advisor_fixes.sql
 ├── migrations/2026-08-26_home_seeker_profiles.sql
 ├── migrations/2026-08-26_stripe_boost_fallback.sql
@@ -439,10 +593,17 @@ kollektivmatch/
 ├── migrations/2026-08-28_payment_and_storage_followup.sql
 ├── migrations/2026-08-31_contact_privacy_hardening.sql
 ├── migrations/2026-09-01_reporting_hardening.sql
+├── migrations/2026-09-07_public_listing_access.sql
+├── migrations/2026-09-07_cabin_property_type.sql
+├── migrations/2026-09-08_security_definer_execute_grants.sql
+├── migrations/2026-09-11_match_preference_coverage.sql
+├── migrations/2026-09-12_ai_listing_checks.sql
+├── migrations/2026-09-12_ai_listing_retention_cron.sql
 ├── supabase/config.toml
 ├── supabase/functions/{create-boost-payment,create-stripe-boost-payment,get-boost-payment-status,
 │   vipps-payment-webhook,refund-boost-payment,start-vipps-verification,
-│   vipps-verification-callback,vipps-integration-status,stripe-payment-webhook}
+│   vipps-verification-callback,vipps-integration-status,stripe-payment-webhook,
+│   analyze-listing-fit}
 ├── docs/AUDIT-2026-08-23.md
 ├── schema.sql
 ├── schema_fresh_install_DELETES_ALL_DATA.sql

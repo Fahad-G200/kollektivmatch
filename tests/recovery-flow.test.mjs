@@ -11,7 +11,7 @@ assert.match(reset, /query\.get\('token_hash'\)[\s\S]+type: 'recovery'/);
 assert.match(reset, /fragment\.get\('access_token'\)[\s\S]+fragment\.get\('refresh_token'\)/);
 assert.doesNotMatch(reset, /else\s*\{\s*result = await supabase\.auth\.getSession\(\)/);
 assert.match(reset, /else\s*\{[\s\S]{0,600}clearSensitiveUrl\(\);[\s\S]{0,80}showInvalid\(\);[\s\S]{0,40}return;/);
-assert.match(reset, /password\.length < 12/);
+assert.match(reset, /password\.length < 6/);
 assert.match(reset, /password !== passwordConfirm/);
 assert.match(reset, /await supabase\.auth\.signOut\(\)/);
 

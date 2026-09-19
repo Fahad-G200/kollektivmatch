@@ -27,3 +27,9 @@ verify_jwt = true
 
 [functions.stripe-payment-webhook]
 verify_jwt = false
+
+[functions.analyze-listing-fit]
+verify_jwt = true
+
+[functions.analyze-external-listing]
+verify_jwt = true

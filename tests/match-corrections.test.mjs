@@ -8,13 +8,23 @@ test('Two documented preferences give a score, including occupation and date', (
   assert.equal(result.score, 100);
   assert.equal(result.criteria, 2);
   assert.equal(result.confidence, 'limited');
-  assert.equal(computeMatch({ preferred_occupations: [] }, { occupation: 'student' }), null);
+  const singleCriterion = computeMatch({ preferred_occupations: [] }, { occupation: 'student' });
+  assert.equal(singleCriterion.score, null);
+  assert.equal(singleCriterion.criteria, 1);
+  assert.equal(singleCriterion.hasScoreBasis, false);
+  assert.equal(singleCriterion.breakdown[0].label, 'Hverdag');
 });
 
-test('Missing occupation data gives no free points; an explicit empty list welcomes everyone', () => {
+test('Missing occupation data is unknown; an explicit empty list welcomes everyone', () => {
   const preferences = { monthly_budget_max: 8000, occupation: 'student' };
   for (const preferred_occupations of [undefined, null]) {
-    assert.equal(computeMatch({ price: 7000, preferred_occupations }, preferences), null);
+    const result = computeMatch({ price: 7000, preferred_occupations }, preferences);
+    const occupation = result.breakdown.find(({ label }) => label === 'Hverdag');
+    assert.equal(result.unknownCriteria, 1);
+    assert.equal(result.verificationCoverage, 50);
+    assert.equal(occupation.status, 'unknown');
+    assert.equal(occupation.percentage, null);
+    assert.ok(result.score < 100, 'Manglende yrkesdata skal ikke behandles som oppfylt');
   }
   assert.equal(computeMatch({ price: 7000, preferred_occupations: [] }, preferences).score, 100);
   assert.equal(computeMatch({ price: 7000, preferred_occupations: ['jobb'] }, preferences).score, 70);
@@ -32,10 +42,20 @@ test('The explanation agrees with budget and property mismatches, including part
   assert.match(partial.breakdown[0].detail, /over månedsbudsjettet/);
 });
 
-test('Amenities preserve saved lifestyle preferences unless explicitly replaced', () => {
+test('Amenities and lifestyle preferences remain separate while filters override their own group', () => {
   const profile = { priority_tags: ['rolig-miljo'] };
-  assert.deepEqual(buildMatchPreferences(profile, { amenities: ['matbutikk'] }).priority_tags, ['matbutikk', 'rolig-miljo']);
-  assert.deepEqual(buildMatchPreferences(profile, { lifestyleTags: ['stort-rom'], amenities: ['matbutikk'] }).priority_tags, ['matbutikk', 'stort-rom']);
+  const amenitiesOnly = buildMatchPreferences(profile, { amenities: ['matbutikk'] });
+  assert.deepEqual(amenitiesOnly.priority_tags, ['rolig-miljo']);
+  assert.deepEqual(amenitiesOnly.preferred_amenities, ['matbutikk']);
+  assert.deepEqual(amenitiesOnly.preferred_lifestyle_tags, ['rolig-miljo']);
+
+  const bothGroups = buildMatchPreferences(profile, {
+    lifestyleTags: ['stort-rom'],
+    amenities: ['matbutikk'],
+  });
+  assert.deepEqual(bothGroups.priority_tags, ['stort-rom']);
+  assert.deepEqual(bothGroups.preferred_amenities, ['matbutikk']);
+  assert.deepEqual(bothGroups.preferred_lifestyle_tags, ['stort-rom']);
 });
 
 test('Compound locations require every named area, without unrelated word matches', () => {

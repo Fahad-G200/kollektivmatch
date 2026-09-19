@@ -8,7 +8,7 @@
 <meta name="description" content="Finn ledige rom og kollektiv i Norge. Søk, filtrer og kontakt utleier på ett sted." />
 
 <link rel="stylesheet" href="css/tailwind.css?v=20260827-1" />
-<link rel="stylesheet" href="css/style.css?v=20260826-1" />
+<link rel="stylesheet" href="css/style.css?v=20260912-3" />
 </head>
 <body class="bg-cream text-ink font-sans antialiased">
 <a class="skip-link" href="#feed">Hopp til hovedinnhold</a>
@@ -161,7 +161,7 @@
       </div>
       <div>
         <label for="f-transit" class="text-xs font-semibold text-mist mb-1 block">Maks min til kollektivtransport</label>
-        <input id="f-transit" type="number" name="maxTransitMinutes" min="0" placeholder="F.eks. 7"
+        <input id="f-transit" type="number" name="maxTransitMinutes" min="0" max="600" step="1" placeholder="F.eks. 7"
                class="w-full px-3.5 py-2.5 rounded-xl border border-line text-sm text-ink placeholder:text-mist/70 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
       </div>
       <fieldset class="rounded-xl border border-line px-3 py-2">
@@ -177,6 +177,7 @@
         <legend class="px-1 text-xs font-semibold text-mist">Boligkvaliteter</legend>
         <div class="grid grid-cols-2 gap-1 text-xs text-ink">
           <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="nyoppusset-bad" class="accent-primary-600" />Pent bad</label>
+          <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="moderne-stil" class="accent-primary-600" />Moderne stil</label>
           <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="stort-kjokken" class="accent-primary-600" />Sosiale soner</label>
           <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="rolig-miljo" class="accent-primary-600" />Rolig miljø</label>
           <label class="flex items-center gap-1.5"><input type="checkbox" name="lifestyleTags" value="stort-rom" class="accent-primary-600" />Stort rom</label>
@@ -193,9 +194,247 @@
       <button type="button" id="reset-filters" class="px-4 py-2.5 text-sm font-semibold text-mist hover:text-ink rounded-xl transition-colors">Nullstill filtre</button>
     </div>
     <div id="active-filters" class="hidden flex flex-wrap gap-2" aria-live="polite"></div>
-    <p class="text-sm leading-relaxed text-mist">Velg minst to preferanser, eller en skole, for å se matchprosent. Søket overstyrer tilsvarende lagrede preferanser. Åpne «Hvorfor?» på boligen for å se grunnlaget. Prosenten er veiledende.</p>
+    <p class="text-sm leading-relaxed text-mist">Velg minst to preferanser, eller en skole, for å se matchprosent. Alle valgte kriterier tas med. Manglende annonsedata vises som «Ikke oppgitt» og teller ikke som oppfylt. Åpne «Hvorfor?» på boligen for hele kontrollgrunnlaget.</p>
     <p id="advanced-filters-unavailable" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">Avanserte bolig- og matchfiltre blir tilgjengelige når databasemigreringen er installert. Sted, pris, dato og sortering virker fortsatt.</p>
   </form>
+</section>
+
+<!-- ============ EKSTERNT SØK ============ -->
+<section class="external-search-wrap max-w-6xl mx-auto px-5 md:px-8" aria-labelledby="external-search-title">
+  <div class="external-search-shell">
+    <div class="external-search-copy">
+      <p class="external-search-kicker">Ekte annonser på nettet</p>
+      <h2 id="external-search-title" class="font-display font-bold text-2xl md:text-3xl">Finn og ranger boligforslag</h2>
+      <p id="external-search-summary" class="external-search-summary" role="status" aria-live="polite" aria-atomic="true">Velg sted, pris eller boligtype for å lage et mer presist FINN-søk.</p>
+      <p id="external-search-detail" class="external-search-detail">Uten filtre åpnes alle aktive utleieannonser.</p>
+      <div id="external-search-meter" class="external-search-status-grid hidden" aria-label="Status for overføring til FINN">
+        <div class="external-search-status-item">
+          <strong id="external-exact-count">0</strong>
+          <span>eksakte FINN-filtre</span>
+        </div>
+        <div class="external-search-status-item">
+          <strong id="external-keyword-count">0</strong>
+          <span>søkeord, ikke verifisert</span>
+        </div>
+        <div class="external-search-status-item is-manual">
+          <strong id="external-manual-count">0</strong>
+          <span>må bekreftes per annonse</span>
+        </div>
+      </div>
+      <div id="external-verification" class="external-verification hidden">
+        <h3>Kontroller i hver ekstern annonse</h3>
+        <ul id="external-verification-list"></ul>
+        <p>Åpne «Kontroller én ekstern bolig» nedenfor og oppgi én annonse for å få en egen, kildebelagt kontroll.</p>
+      </div>
+      <p class="external-search-detail">Den automatiske kontrollen bruker bare kilder nettstedet har lov til å søke i. Hvert forslag får match, mangler, ukjente punkter og en klikkbar kildelenke.</p>
+      <p class="external-search-detail">Vi leser ikke bilder eller annonsetekst automatisk fra FINN, Hybel.no eller Facebook.</p>
+    </div>
+
+    <div class="external-search-actions">
+      <a id="external-finn-link" href="https://www.finn.no/realestate/lettings/search.html" target="_blank" rel="noopener noreferrer" class="external-search-primary">
+        <span>
+          <small>Alternativ: søk selv hos kilden</small>
+          <strong>Åpne FINN-søket</strong>
+          <span class="sr-only"> (åpnes i ny fane)</span>
+        </span>
+        <span class="external-search-arrow" aria-hidden="true">↗</span>
+      </a>
+      <button id="copy-external-search" type="button" class="external-search-copy-button">
+        Kopier søketekst til andre sider
+      </button>
+      <div class="external-provider-links" aria-label="Andre boligmarkedsplasser">
+        <span>Søk også hos</span>
+        <a href="https://www.husleie.no/bolig-til-leie/" target="_blank" rel="noopener noreferrer">Husleie.no <span aria-hidden="true">↗</span><span class="sr-only"> (åpnes i ny fane)</span></a>
+        <a href="https://hybel.no/bolig-til-leie/" target="_blank" rel="noopener noreferrer">Hybel.no <span aria-hidden="true">↗</span><span class="sr-only"> (åpnes i ny fane)</span></a>
+        <a id="external-facebook-link" href="https://www.facebook.com/marketplace/category/propertyrentals/" target="_blank" rel="noopener noreferrer">Facebook Marketplace <span aria-hidden="true">↗</span><span class="sr-only"> (åpnes i ny fane)</span></a>
+      </div>
+      <div id="external-fallback-searches" class="external-fallback-searches hidden" aria-labelledby="external-fallback-title">
+        <span id="external-fallback-title">For få treff?</span>
+        <div id="external-fallback-links"></div>
+      </div>
+    </div>
+
+    <p class="external-search-note">Automatisk søk dekker ikke nødvendigvis hele markedet. Treff kan være endret eller utløpt, så kontroller alltid pris, tilgjengelighet og vilkår på kildesiden før du velger.</p>
+
+    <details id="external-listing-check" class="external-check-panel" open>
+      <summary>
+        <span>
+          <small>Automatisk boligjakt · beta</small>
+          <strong>Finn forslag og beregn match</strong>
+          <span>Du fyller bare inn preferansene over. Vi finner lenkene og kontrollerer alle valgte krav.</span>
+        </span>
+        <span class="external-check-chevron" aria-hidden="true">⌄</span>
+      </summary>
+
+      <div class="external-check-body">
+        <div class="external-check-intro">
+          <div>
+            <p class="external-search-kicker">Søk · bilde · kart · prosent</p>
+            <h3>Ett trykk gir rangerte boligforslag</h3>
+            <p>Søket kontrollerer område, pris, boligtype, innflytting, hverdag, transport, fasiliteter, skole og boligkvalitet når du har valgt dem. Visuelle krav som moderne bad godkjennes bare når et bilde kan knyttes til den samme annonsen; ellers står de som «Ukjent».</p>
+          </div>
+          <div class="external-check-preferences" aria-labelledby="external-auto-preferences-title">
+            <strong id="external-auto-preferences-title">Dette blir kontrollert i hvert forslag</strong>
+            <ul id="automatic-check-preference-list"></ul>
+            <p id="automatic-check-preference-status" role="status">Velg minst to preferanser, eller én skole, i søket over.</p>
+          </div>
+        </div>
+
+        <div class="external-auto-action">
+          <button id="external-auto-search-submit" type="button">Finn og sjekk boligforslag</button>
+          <div>
+            <strong id="external-auto-action-title">Ingen adresse eller lenke å lime inn</strong>
+            <p id="external-auto-status" role="status" aria-live="polite">Du må være logget inn. Resultater og kilder vises rett under knappen.</p>
+          </div>
+        </div>
+
+        <section id="external-auto-result" class="external-auto-result hidden" aria-labelledby="external-auto-result-title" tabindex="-1">
+          <div class="external-auto-result-heading">
+            <div>
+              <p class="external-search-kicker">Rangert etter alle valgte krav</p>
+              <h3 id="external-auto-result-title">Boligforslag</h3>
+              <p id="external-auto-summary"></p>
+            </div>
+            <span id="external-auto-searched-at" class="external-auto-searched-at"></span>
+          </div>
+          <div id="external-auto-results" class="external-auto-results"></div>
+          <div id="external-auto-warnings" class="external-result-warnings"></div>
+          <p class="external-auto-disclaimer">Matchprosenten er veiledende og beregnes av serveren. «Ukjent» gir ikke poeng. Kildelenken er fasiten for om annonsen fortsatt er aktiv.</p>
+        </section>
+      </div>
+    </details>
+
+    <details id="legacy-external-listing-check" class="external-check-panel" hidden inert aria-hidden="true">
+      <summary>
+        <span>
+          <small>Ny betafunksjon</small>
+          <strong>Kontroller én ekstern bolig</strong>
+          <span>Få prosent, «har/mangler» og kilder for alle valgene dine.</span>
+        </span>
+        <span class="external-check-chevron" aria-hidden="true">⌄</span>
+      </summary>
+
+      <div class="external-check-body">
+        <div class="external-check-intro">
+          <div>
+            <p class="external-search-kicker">Kontrollert match</p>
+            <h3>Oppgi boligen – vi sjekker preferansene</h3>
+            <p>Lenken brukes bare som en vei tilbake til annonsen og blir aldri åpnet av serveren. Adresse brukes til én kartkontroll. Valgte bilder brukes til én begrenset AI-vurdering av synlige boligtrekk.</p>
+          </div>
+          <div class="external-check-preferences" aria-labelledby="external-check-preferences-title">
+            <strong id="external-check-preferences-title">Dette blir kontrollert</strong>
+            <ul id="external-check-preference-list"></ul>
+            <p id="external-check-preference-status" role="status">Velg minst to preferanser, eller én skole, i søket over.</p>
+          </div>
+        </div>
+
+        <form id="external-listing-check-form" class="external-check-form" novalidate>
+          <div class="external-check-field external-check-field-wide">
+            <label for="external-source-url">Lenke til FINN-annonsen</label>
+            <input id="external-source-url" name="sourceUrl" type="url" inputmode="url" autocomplete="url" maxlength="500" required placeholder="https://www.finn.no/realestate/.../ad.html?finnkode=…" />
+            <small>Formatet kontrolleres, men KollektivMatch henter eller verifiserer ikke siden.</small>
+          </div>
+          <div class="external-check-field external-check-field-wide">
+            <label for="external-address">Full gateadresse for boligen</label>
+            <input id="external-address" name="address" type="text" autocomplete="street-address" minlength="5" maxlength="180" required placeholder="F.eks. Nydalsveien 37, 0484 Oslo" />
+            <small>Sendes til <span translate="no">Google Maps</span> først når du starter kontrollen. Bruk adressen fra annonsen.</small>
+          </div>
+          <div class="external-check-field">
+            <label for="external-price">Månedspris</label>
+            <input id="external-price" name="monthlyPrice" type="number" inputmode="numeric" min="500" max="500000" step="1" required placeholder="8 000" />
+          </div>
+          <div class="external-check-field">
+            <label for="external-property-type">Boligtype i annonsen</label>
+            <select id="external-property-type" name="propertyType" required>
+              <option value="">Velg boligtype</option>
+              <option value="leilighet">Leilighet</option>
+              <option value="hybel">Hybel</option>
+              <option value="enebolig">Enebolig</option>
+              <option value="rekkehus">Rekkehus</option>
+              <option value="studentbolig">Studentbolig / rom</option>
+              <option value="hytte">Hytte</option>
+              <option value="annet">Annet</option>
+            </select>
+          </div>
+          <div class="external-check-field">
+            <label for="external-move-in">Ledig fra <span>(valgfritt)</span></label>
+            <input id="external-move-in" name="moveInDate" type="date" />
+          </div>
+          <div class="external-check-field">
+            <label for="external-occupation">Annonsen passer for <span>(valgfritt)</span></label>
+            <select id="external-occupation" name="acceptedOccupation">
+              <option value="ikke-oppgitt">Ikke oppgitt</option>
+              <option value="alle">Student og i jobb</option>
+              <option value="student">Student</option>
+              <option value="jobb">I jobb</option>
+              <option value="annet">Annet</option>
+            </select>
+          </div>
+
+          <fieldset class="external-check-claims external-check-field-wide">
+            <legend>Hva hevder annonsen om boligen? <span>(valgfritt)</span></legend>
+            <p>Kryss av korte påstander i stedet for å kopiere hele annonseteksten. Kryss bare av kvaliteter du også har valgt i søket over; AI sammenligner dem med bildene.</p>
+            <div>
+              <label><input type="checkbox" name="advertisedClaims" value="nyoppusset-bad" /> Fint / nyoppusset bad</label>
+              <label><input type="checkbox" name="advertisedClaims" value="moderne-stil" /> Moderne stil</label>
+              <label><input type="checkbox" name="advertisedClaims" value="stort-kjokken" /> Stort kjøkken / sosial sone</label>
+              <label><input type="checkbox" name="advertisedClaims" value="stort-rom" /> Stort rom</label>
+              <label><input type="checkbox" name="advertisedClaims" value="rolig-miljo" /> Rolig miljø</label>
+            </div>
+          </fieldset>
+
+          <div class="external-check-upload external-check-field-wide">
+            <label for="external-images">Bilder som skal vurderes <span>(opptil 3)</span></label>
+            <input id="external-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+            <p>Velg bare beskårne boligbilder uten navn, telefon, e-post, meldinger, ansikter eller konto-/nettleserinformasjon. Bilder blir skalert i nettleseren før sending.</p>
+            <div id="external-image-previews" class="external-image-previews" aria-live="polite"></div>
+          </div>
+
+          <label class="external-check-consent external-check-field-wide">
+            <input id="external-analysis-consent" name="analysisConsent" type="checkbox" required />
+            <span>Jeg har rett til å sende inn disse opplysningene og bildene, og ber om at adressen behandles av <span translate="no">Google Maps</span> og bildene av OpenAI for denne kontrollen. KollektivMatch lagrer ikke innholdet eller resultatet i database eller bildelager; leverandørenes egne sikkerhetslogger kan likevel ha begrenset oppbevaring.</span>
+          </label>
+
+          <div class="external-check-submit external-check-field-wide">
+            <button id="external-check-submit" type="submit">Start kontrollen</button>
+            <p id="external-check-status" role="status" aria-live="polite">Du må være logget inn. Vanlig grense er 3 kontroller per time.</p>
+          </div>
+        </form>
+
+        <section id="external-check-result" class="external-check-result hidden" aria-labelledby="external-check-result-title" tabindex="-1">
+          <div class="external-result-heading">
+            <div class="external-score-orb" aria-hidden="true"><strong id="external-result-score">–</strong><span>%</span></div>
+            <div>
+              <p class="external-search-kicker">Kontrollert match · beta</p>
+              <h3 id="external-check-result-title">Resultatet er klart</h3>
+              <p id="external-result-coverage"></p>
+            </div>
+            <a id="external-result-source-link" href="#" target="_blank" rel="noopener noreferrer">Åpne annonsen hos FINN <span aria-hidden="true">↗</span></a>
+          </div>
+
+          <div class="external-result-groups">
+            <section class="external-result-group is-met" aria-labelledby="external-result-met-title">
+              <h4 id="external-result-met-title">Har</h4>
+              <ul id="external-result-met"></ul>
+            </section>
+            <section class="external-result-group is-missing" aria-labelledby="external-result-missing-title">
+              <h4 id="external-result-missing-title">Mangler eller treffer delvis</h4>
+              <ul id="external-result-missing"></ul>
+            </section>
+            <section class="external-result-group is-unknown" aria-labelledby="external-result-unknown-title">
+              <h4 id="external-result-unknown-title">Kan ikke fastslås</h4>
+              <ul id="external-result-unknown"></ul>
+            </section>
+          </div>
+
+          <div id="external-result-maps-attribution" class="external-result-attribution hidden">
+            Karttreff og ruter fra <span class="google-maps-attribution" translate="no">Google Maps</span><span id="external-result-third-party-attribution"></span>. Nærmeste treff rangeres primært etter avstand; bekreft alltid i kartet.
+          </div>
+          <div id="external-result-warnings" class="external-result-warnings"></div>
+        </section>
+      </div>
+    </details>
+  </div>
 </section>
 
 <!-- ============ FEED ============ -->
@@ -237,7 +476,7 @@
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-    <a href="https://www.finn.no/realestate/lettings/search.html?q=leilighet" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8CAB7] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive leiligheter hos FINN – åpnes i ny fane">
+    <a href="https://www.finn.no/realestate/lettings/search.html?property_type=3" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8CAB7] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive leiligheter hos FINN – åpnes i ny fane">
       <div class="absolute inset-0 bg-cover bg-left transition-transform duration-500 group-hover:scale-[1.03]" data-property-art="apartment" role="img" aria-label="Lys skandinavisk leilighet"></div>
       <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
       <div class="absolute inset-x-0 bottom-0 p-5 text-white">
@@ -248,7 +487,7 @@
       </div>
     </a>
 
-    <a href="https://www.finn.no/realestate/lettings/search.html?q=enebolig" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8D2C6] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hus hos FINN – åpnes i ny fane">
+    <a href="https://www.finn.no/realestate/lettings/search.html?property_type=1" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#D8D2C6] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hus hos FINN – åpnes i ny fane">
       <div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]" data-property-art="house" role="img" aria-label="Norsk hus med hage"></div>
       <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
       <div class="absolute inset-x-0 bottom-0 p-5 text-white">
@@ -259,7 +498,7 @@
       </div>
     </a>
 
-    <a href="https://www.finn.no/realestate/lettings/search.html?q=hytte" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#6D786C] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hytter hos FINN – åpnes i ny fane">
+    <a href="https://www.finn.no/realestate/lettings/search.html?property_type=12" target="_blank" rel="noopener noreferrer" class="group relative min-h-72 overflow-hidden rounded-3xl bg-[#6D786C] shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30" aria-label="Se aktive hytter hos FINN – åpnes i ny fane">
       <div class="absolute inset-0 bg-cover bg-right transition-transform duration-500 group-hover:scale-[1.03]" data-property-art="cabin" role="img" aria-label="Tømmerhytte ved vann og skog"></div>
       <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
       <div class="absolute inset-x-0 bottom-0 p-5 text-white">
@@ -388,7 +627,7 @@
       <input id="register-email" required type="email" name="email" placeholder="E-post" autocomplete="email"
              class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
       <label for="register-password" class="sr-only">Passord</label>
-      <input id="register-password" required type="password" name="password" placeholder="Passord (min. 12 tegn)" minlength="12" maxlength="128" autocomplete="new-password"
+      <input id="register-password" required type="password" name="password" placeholder="Passord (min. 6 tegn)" minlength="6" maxlength="128" autocomplete="new-password"
              class="w-full px-4 py-3 rounded-xl border border-line text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500" />
       <label for="register-role" class="sr-only">Hva vil du bruke KollektivMatch til?</label>
       <select id="register-role" name="role" class="w-full px-4 py-3 rounded-xl border border-line text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
@@ -449,6 +688,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=20260908-1"></script>
+  <script type="module" src="app.js?v=20260912-3"></script>
 </body>
 </html>
