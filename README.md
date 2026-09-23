@@ -86,7 +86,7 @@ Detaljer om databaseoppsett, migreringer og produksjonskontroller følger under.
 ## Viktig før oppstart
 
 Prosjektet har eksisterende brukere og annonser. For en eksisterende database
-skal du kjøre disse tjueto migreringene i rekkefølge:
+skal du kjøre disse tjuefem migreringene i rekkefølge:
 
 `migrations/2026-08-23_kollektivmatch_hardening.sql`
 
@@ -132,10 +132,16 @@ skal du kjøre disse tjueto migreringene i rekkefølge:
 
 `migrations/2026-09-12_external_listing_analysis_retention_cron.sql`
 
-De tjue migreringene som ikke gjelder Cron er additive og legger til felter,
+`migrations/2026-09-20_automatic_listing_search.sql`
+
+`migrations/2026-09-20_supabase_advisor_hardening.sql`
+
+`migrations/2026-09-20_automatic_listing_search_retention_cron.sql`
+
+De tjueto migreringene som ikke gjelder Cron er additive og legger til felter,
 validering, funksjoner, rettigheter og policyer uten å slette eksisterende
-bruker- eller annonsedata. De to Cron-migreringene installerer bare slettejobber
-for private analysekvoter. `schema.sql` er nå kun en sikker veiviser. Ikke kjør
+bruker- eller annonsedata. De tre Cron-migreringene installerer bare slettejobber
+for private kvotelogger. `schema.sql` er nå kun en sikker veiviser. Ikke kjør
 `schema_fresh_install_DELETES_ALL_DATA.sql` på en eksisterende database; den
 filen inneholder med hensikt `DROP TABLE` for en helt ny installasjon. Ved en tom
 førstegangsinstallasjon kjøres fresh-install-filen først, deretter de daterte
@@ -156,6 +162,8 @@ prosjektmappen:
 
 ```bash
 npm ci
+export SUPABASE_URL="https://PROJECT_REF.supabase.co"
+export SUPABASE_PUBLISHABLE_KEY="sb_publishable_..."
 npm run dev
 ```
 
@@ -164,7 +172,10 @@ leveransen uten eldre Vipps-verifiseringssider.
 
 Supabase-klienten er låst til `@supabase/supabase-js@2.111.0` og bundtes til
 `public/supabase-config.js` under bygging. Den flytende `@2`-importen og direkte
-CDN-kjøring brukes ikke.
+CDN-kjøring brukes ikke. Bygget stopper hvis URL eller publishable key mangler,
+eller hvis en secret/service-role key forsøkes brukt i nettleserpakken. Sett de
+to verdiene som beskyttede miljøvariabler hos hostingleverandøren; ikke legg dem
+inn i kildekoden.
 
 ## Supabase Dashboard – konkret rekkefølge
 
@@ -189,10 +200,13 @@ CDN-kjøring brukes ikke.
    `migrations/2026-09-08_security_definer_execute_grants.sql` og
    `migrations/2026-09-11_match_preference_coverage.sql` og
    `migrations/2026-09-12_ai_listing_checks.sql` og
-   `migrations/2026-09-12_external_listing_analysis.sql`. Aktiver deretter
+   `migrations/2026-09-12_external_listing_analysis.sql`,
+   `migrations/2026-09-20_automatic_listing_search.sql` og
+   `migrations/2026-09-20_supabase_advisor_hardening.sql`. Aktiver deretter
    **Cron** under **Integrations** i Supabase, og kjør
    `migrations/2026-09-12_ai_listing_retention_cron.sql` og
-   `migrations/2026-09-12_external_listing_analysis_retention_cron.sql`.
+   `migrations/2026-09-12_external_listing_analysis_retention_cron.sql` og
+   `migrations/2026-09-20_automatic_listing_search_retention_cron.sql`.
    Cron-migreringene feiler tydelig hvis Cron ikke er aktivert, og sletter kun
    private analysekvotelogger. Ingen av migreringene sletter eksisterende
    brukere eller annonser.
@@ -293,9 +307,11 @@ bekreftet at hele beløpet er captured.
    supabase secrets set --env-file .env.vipps.local
    ```
 
-   Supabase leverer `SUPABASE_URL`, `SUPABASE_ANON_KEY` og
-   `SUPABASE_SERVICE_ROLE_KEY` til Edge Functions. Kontroller dette i prosjektet;
-   `service_role` skal aldri sendes til nettleseren.
+   Supabase leverer `SUPABASE_URL`, JSON-ordbøkene
+   `SUPABASE_PUBLISHABLE_KEYS` og `SUPABASE_SECRET_KEYS` til Edge Functions.
+   Funksjonene bruker nøkkelen `default` og har midlertidig bakoverkompatibilitet
+   med `SUPABASE_ANON_KEY` og `SUPABASE_SERVICE_ROLE_KEY`. En secret- eller
+   service-role-nøkkel skal aldri sendes til nettleseren.
 7. Deploy funksjonene:
 
    ```bash
@@ -470,12 +486,13 @@ Aktivering i et testprosjekt:
    `ALLOW_LOCAL_ORIGINS=true`. Ikke bruk disse lokalverdiene i produksjon;
    produksjonsprosjektet skal ha eksakt HTTPS-origin og lokalflagget avslått.
 
-5. Sett Supabase-secrets og deploy den JWT-beskyttede funksjonen:
+5. Sett Supabase-secrets og deploy de JWT-beskyttede funksjonene:
 
    ```bash
    supabase secrets set --env-file .env.analysis.local
    supabase functions deploy analyze-listing-fit
    supabase functions deploy analyze-external-listing
+   supabase functions deploy find-listing-matches
    ```
 
 6. Rediger en testannonse, slå på «Tillat AI-bildekontroll», åpne annonsen som
@@ -551,55 +568,47 @@ skal derfor ikke aktiveres før KollektivMatch har en skriftlig avtale, FINN-org
 API-nøkkel og dokumentert rett til å vise de aktuelle annonsene. Hold nøkkelen i
 en serverfunksjon, aldri i frontend, og merk annonsenes kilde tydelig.
 
-Forsiden lager i stedet et preferansebasert utgående FINN-søk i
-`external-search.js`. Kontrollvisningen skiller mellom eksakte FINN-filtre,
-søkeord som ikke er verifisert, og kriterier som må bekreftes i hver annonse.
-Støttede boligtyper, makspris, innflyttingsmåned og enkelte sorteringer sendes
-som faktiske FINN-filtre. Sted og studentbolig sendes som søkeord, og vises også
-som uverifiserte der innholdet må kontrolleres per annonse. Skoleavstand,
-kollektivtransport, fasiliteter, ønsket hverdag og boligkvaliteter står i den
-samme kontrollisten når de er valgt.
+Forsidens hovedknapp starter et brukerinitiert automatisk søk etter eksterne
+boligforslag. Én gyldig preferanse er nok til å starte, og alle valgte krav
+vises i kontrollisten før søket. FINN-søket i `external-search.js`, søketeksten
+som kan kopieres og lenkene til andre markedsplasser er separate, manuelle
+alternativer. De eksterne sidene leses ikke av denne fallback-flyten.
 
-Kontrollisten betyr ikke at KollektivMatch har lest eller godkjent annonsen;
-hvert punkt er først merket «Må bekreftes». Valgene blir også gjort om til en
-søketekst som brukeren kan kopiere til Husleie.no, Hybel.no eller Facebook
-Marketplace. Ingen av sidene leses automatisk.
+`find-listing-matches` gjør følgende på serveren:
 
-Forsiden har i tillegg en separat, brukerinitiert «Kontrollert match (beta)» for
-én konkret FINN-annonse. Dette er ikke scraping eller en FINN-integrasjon:
+- bruker OpenAI web search med en serverstyrt liste over domener virksomheten
+  har lov til å søke i; klienten kan ikke velge eller utvide domenelisten;
+- forsøker først alle ønsker og utvider deretter søket trinnvis slik at legitime
+  nesten-treff beholdes med synlige mangler i stedet for å filtreres bort;
+- godtar bare HTTPS-annonselenker som både ligger på den konfigurerte
+  domenelisten og finnes blant søkekallets faktiske kilder/siteringer;
+- kobler bare et bilde til en annonse når bildesøket oppgir nøyaktig samme
+  `source_website_url` som den validerte annonselenken;
+- bruker Google Maps til å kontrollere norsk kartadresse, nærmeste valgte
+  fasiliteter, gangtid til kollektivtransport og avstand/rute til skole;
+- beregner prosent deterministisk på serveren. AI finner og strukturerer
+  kildebevis, men får aldri bestemme prosent. Ukjent gir null poeng og vises
+  separat sammen med dekningsprosent;
+- returnerer hvert forslag med bilde når sammenhengen er verifisert, prosent,
+  beliggenhet, pris, minutter/km, «matcher», «mangler», «ukjent» og klikkbar
+  kildelenke;
+- bruker et samlet tidsbudsjett og returnerer allerede dokumenterte treff med
+  uferdige kontroller markert som «ukjent» hvis en ekstern leverandør er treg.
 
-- FINN-lenken formatvalideres og brukes som deeplink, men hentes aldri av
-  klienten eller serverfunksjonen;
-- brukeren oppgir selv gateadresse, pris, boligtype, innflyttingsdato og ønsket
-  hverdag, og kan merke faste påstander fra annonsen;
-- nettleseren skalerer maksimalt tre bruker-valgte boligbilder til WebP;
-- `analyze-external-listing` geokoder adressen, kontrollerer nærmeste valgte
-  fasiliteter, gangtid til kollektivtransport og skoleavstand/-rute med Google,
-  og bruker OpenAI kun for valgte, synlige boligkvaliteter;
-- serveren beregner prosenten deterministisk med samme vekter som Smart Match.
-  AI får aldri beregne prosent, og ukjent inngår i nevneren med null poeng;
-- resultatet viser «Har», «Mangler eller delvis» og «Kan ikke fastslås», med
-  kilde per kriterium og en egen dekningsprosent;
-- lenke, finnkode, adresse, bilder, Google-resultat og analyseresultat lagres
-  ikke av KollektivMatch. En minimal privat kvotelogg lagrer bare bruker-ID og
-  tidspunkt i opptil omtrent 25 timer.
+Kjør `migrations/2026-09-20_automatic_listing_search.sql`, aktiver Supabase Cron
+og kjør `migrations/2026-09-20_automatic_listing_search_retention_cron.sql` før
+funksjonen deployes. Sett `OPENAI_SEARCH_MODEL`,
+`ALLOWED_LISTING_SEARCH_DOMAINS` og `LISTING_SEARCH_LIVE_ACCESS` som
+server-secrets. Standard for live tilgang er `false`; aktiver den bare når alle
+konfigurerte kildeavtaler tillater dette. Kvoten er 2 søk per time og 6 per
+døgn. Den private kvoteloggen inneholder bare bruker-ID og tidspunkt i opptil
+omtrent 25 timer. Preferanser, annonselenker, bilder, karttreff og resultater
+lagres ikke av KollektivMatch. OpenAI-kallet bruker `store: false`, men dette er
+ikke et løfte om null leverandøroppbevaring.
 
-Kjør `migrations/2026-09-12_external_listing_analysis.sql` før funksjonen
-deployes. Aktiver deretter Supabase Cron og kjør
-`migrations/2026-09-12_external_listing_analysis_retention_cron.sql` for
-uavhengig opprydding av kvoteloggen. Funksjonen godtar bare
-`multipart/form-data`, krever innlogging og
-samtykkeflagg, tillater maksimalt tre WebP-bilder på 2 MiB hver og har en atomisk
-kvote på 3 kontroller per time og 10 per døgn. Eksterne bilde-URL-er godtas
-aldri. `store: false` brukes hos OpenAI, men dette er ikke et løfte om null
-leverandøroppbevaring; sikkerhets-/misbrukslogger og et eventuelt ZDR-oppsett må
-dokumenteres før produksjon.
-
-Denne manuelle flyten gir heller ikke automatisk rett til å sende FINN-innhold
-til en tredjepart. Før produksjonslansering må virksomheten avklare skriftlig at
-brukeren og KollektivMatch har nødvendige rettigheter til de valgte bildene og
-den aktuelle behandlingen. Automatisk FINN-søk, bildehenting eller markedsfeed
-forblir sperret frem til en uttrykkelig avtale dekker dette.
+FINN må ikke legges til `ALLOWED_LISTING_SEARCH_DOMAINS` før en skriftlig avtale
+uttrykkelig dekker automatisk søk, bildebehandling og visning av resultatlenker.
+Uten en slik avtale er FINN-knappen kun et utgående søk som brukeren åpner selv.
 
 ## Produksjonssjekkliste for personvern og sikkerhet
 
@@ -674,12 +683,17 @@ kollektivmatch/
 ├── migrations/2026-09-08_security_definer_execute_grants.sql
 ├── migrations/2026-09-11_match_preference_coverage.sql
 ├── migrations/2026-09-12_ai_listing_checks.sql
+├── migrations/2026-09-12_external_listing_analysis.sql
 ├── migrations/2026-09-12_ai_listing_retention_cron.sql
+├── migrations/2026-09-12_external_listing_analysis_retention_cron.sql
+├── migrations/2026-09-20_automatic_listing_search.sql
+├── migrations/2026-09-20_supabase_advisor_hardening.sql
+├── migrations/2026-09-20_automatic_listing_search_retention_cron.sql
 ├── supabase/config.toml
 ├── supabase/functions/{create-boost-payment,create-stripe-boost-payment,get-boost-payment-status,
 │   vipps-payment-webhook,refund-boost-payment,start-vipps-verification,
 │   vipps-verification-callback,vipps-integration-status,stripe-payment-webhook,
-│   analyze-listing-fit}
+│   analyze-listing-fit,analyze-external-listing,find-listing-matches}
 ├── docs/AUDIT-2026-08-23.md
 ├── schema.sql
 ├── schema_fresh_install_DELETES_ALL_DATA.sql
@@ -701,8 +715,8 @@ annonsevideo, ressursbegrenset bildegalleri, meldingsregresjoner og serververifi
 fremheving. Bygget skal i tillegg bekrefte at lokal Tailwind genereres og at
 den offentlige leveransen ikke inneholder eldre Vipps-verifiseringssider.
 
-Grunnmigreringene og alle sju Edge Functions ble installert i Supabase-
-prosjektet `wsfnnaiytweaarncewcr` 23. august 2026. Migreringen som fjerner den
+Grunnmigreringene og alle sju Edge Functions ble installert i testprosjektet
+23. august 2026. Migreringen som fjerner den
 faste bildegrensen ble installert og kontrollert 25. august 2026. Transaksjonelle tester mot
 prosjektet bekreftet start/svar/lesestatus/pauset samtale for meldinger samt
 serverpris, capture-leveranse, idempotens og avvisning av feil beløp for

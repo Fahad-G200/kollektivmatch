@@ -2,13 +2,6 @@ const PROPERTY_TYPES = new Set(['leilighet', 'hybel', 'enebolig', 'rekkehus', 's
 const AMENITIES = new Set(['matbutikk', 'kollektivtransport', 'treningssenter', 'grontomrade']);
 const LIFESTYLE = new Set(['stort-rom', 'moderne-stil', 'nyoppusset-bad', 'rolig-miljo', 'stort-kjokken']);
 const VISUAL_LIFESTYLE = new Set(['stort-rom', 'moderne-stil', 'nyoppusset-bad', 'stort-kjokken']);
-const ACCEPTED_OCCUPATIONS = new Set(['ikke-oppgitt', 'alle', 'student', 'jobb', 'annet']);
-const FINN_HOSTS = new Set(['finn.no', 'www.finn.no']);
-const FINN_LISTING_PATH = /^\/realestate\/lettings\/ad\.html$/;
-const MAX_IMAGES = 3;
-const MAX_SOURCE_IMAGE_BYTES = 12 * 1024 * 1024;
-const MAX_OUTPUT_IMAGE_BYTES = 2 * 1024 * 1024;
-const MAX_IMAGE_EDGE = 1600;
 
 const PROPERTY_LABELS = {
   leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig', rekkehus: 'Rekkehus',
@@ -24,7 +17,8 @@ const LIFESTYLE_LABELS = {
   'stort-kjokken': 'Stort kjøkken / sosial sone',
 };
 const SOURCE_LABELS = {
-  user_supplied: 'Oppgitt av deg', google_maps: 'Google Maps', ai_visual: 'AI-bildekontroll',
+  listing_text: 'Annonsetekst', listing_image: 'Bilde fra annonsen',
+  google_maps: 'Google Maps', source_page: 'Kildeside',
 };
 
 let supabasePromise;
@@ -60,23 +54,6 @@ function validDate(value) {
     && date.getUTCDate() === Number(match[3]) ? match[0] : '';
 }
 
-export function validateFinnListingUrl(value) {
-  const cleaned = cleanText(value, 500);
-  if (!cleaned) return null;
-  try {
-    const url = new URL(cleaned);
-    const finnkode = url.searchParams.get('finnkode') || '';
-    if (url.protocol !== 'https:' || !FINN_HOSTS.has(url.hostname.toLowerCase())
-      || url.port || url.username || url.password || !FINN_LISTING_PATH.test(url.pathname)
-      || !/^\d{6,12}$/.test(finnkode)) return null;
-    const canonical = new URL(`https://www.finn.no${url.pathname}`);
-    canonical.searchParams.set('finnkode', finnkode);
-    return canonical.toString();
-  } catch {
-    return null;
-  }
-}
-
 function validSchool(filters = {}) {
   const name = cleanText(filters.schoolName, 160);
   const latitude = Number(filters.schoolLat);
@@ -87,17 +64,15 @@ function validSchool(filters = {}) {
 }
 
 export function externalPreferencesFromFilters(filters = {}) {
-  const maxPrice = positiveInteger(filters.maxPrice, 1, 10_000_000);
-  const maxTransitMinutes = positiveInteger(filters.maxTransitMinutes, 0, 600);
   const propertyType = cleanText(filters.propertyType, 40);
   const preferredOccupation = cleanText(filters.preferredOccupation, 40);
   return {
     city: cleanText(filters.city, 100),
-    max_price: maxPrice,
+    max_price: positiveInteger(filters.maxPrice, 1, 10_000_000),
     desired_move_in_date: validDate(filters.moveInDate) || null,
     property_type: PROPERTY_TYPES.has(propertyType) ? propertyType : null,
     preferred_occupation: ['student', 'jobb', 'annet'].includes(preferredOccupation) ? preferredOccupation : null,
-    max_transit_minutes: maxTransitMinutes,
+    max_transit_minutes: positiveInteger(filters.maxTransitMinutes, 0, 600),
     amenities: selectedValues(filters.amenities, AMENITIES),
     lifestyle_tags: selectedValues(filters.lifestyleTags, LIFESTYLE),
     school: validSchool(filters),
@@ -106,6 +81,7 @@ export function externalPreferencesFromFilters(filters = {}) {
 
 export function preferencePresentation(filters = {}) {
   const preferences = externalPreferencesFromFilters(filters);
+  const requestedSchoolName = cleanText(filters.schoolName, 160);
   const items = [];
   if (preferences.city) items.push({ key: 'city', label: `Område: ${preferences.city}` });
   if (preferences.max_price !== null) items.push({ key: 'max_price', label: `Makspris: ${preferences.max_price.toLocaleString('nb-NO')} kr` });
@@ -119,35 +95,298 @@ export function preferencePresentation(filters = {}) {
   return {
     preferences,
     items,
-    hasScoreBasis: items.length >= 2 || Boolean(preferences.school),
+    hasScoreBasis: items.length >= 1,
     needsImages: preferences.lifestyle_tags.some((key) => VISUAL_LIFESTYLE.has(key)),
+    schoolNeedsSelection: Boolean(requestedSchoolName && !preferences.school),
   };
 }
 
-export function buildExternalAnalysisPayload(filters, values = {}) {
-  const sourceUrl = validateFinnListingUrl(values.sourceUrl);
-  const propertyType = cleanText(values.propertyType, 40);
-  const acceptedOccupation = cleanText(values.acceptedOccupation, 40) || 'ikke-oppgitt';
-  const preferences = externalPreferencesFromFilters(filters);
-  const advertisedClaims = selectedValues(values.advertisedClaims, LIFESTYLE)
-    .filter((key) => preferences.lifestyle_tags.includes(key));
+export function buildAutomaticSearchPayload(filters = {}) {
   return {
-    source_url: sourceUrl,
-    address: cleanText(values.address, 180),
-    monthly_price: positiveInteger(values.monthlyPrice, 500, 500_000),
-    property_type: PROPERTY_TYPES.has(propertyType) ? propertyType : null,
-    move_in_date: validDate(values.moveInDate) || null,
-    accepted_occupation: ACCEPTED_OCCUPATIONS.has(acceptedOccupation) ? acceptedOccupation : null,
-    advertised_claims: advertisedClaims,
-    analysis_consent: values.analysisConsent === true,
-    preferences,
+    schema_version: 'automatic-listing-search-v1',
+    preferences: externalPreferencesFromFilters(filters),
   };
+}
+
+function hostAllowed(hostname, domains) {
+  const host = hostname.toLowerCase().replace(/\.$/, '');
+  return domains.some((domain) => {
+    const allowed = cleanText(domain, 253).toLowerCase().replace(/^\.+|\.+$/g, '');
+    return allowed && (host === allowed || host.endsWith(`.${allowed}`));
+  });
+}
+
+export function safeResultUrl(value, allowedDomains = []) {
+  try {
+    const url = new URL(String(value || ''));
+    if (url.protocol !== 'https:' || url.username || url.password || url.port || !hostAllowed(url.hostname, allowedDomains)) return null;
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function safeImageUrl(value, allowedHosts = []) {
+  try {
+    const url = new URL(String(value || ''));
+    if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
+    if (!allowedHosts.length || !hostAllowed(url.hostname, allowedHosts)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function activeStatusText(value) {
+  if (value === 'likely_active' || value === 'active') return 'Trolig aktiv annonse';
+  if (value === 'inactive') return 'Kan være utløpt';
+  return 'Aktiv status ukjent';
+}
+
+function listLabels(value) {
+  return (Array.isArray(value) ? value : []).slice(0, 12)
+    .map((entry) => cleanText(typeof entry === 'string' ? entry : entry?.label, 120)).filter(Boolean);
+}
+
+export function formatAutomaticResultLine(result = {}) {
+  const percent = Number.isInteger(result?.score?.percent) ? `${result.score.percent} %` : 'Ukjent match';
+  const title = cleanText(result.title, 140) || 'Boligforslag';
+  const matched = listLabels(result.has);
+  const missing = listLabels(result.missing);
+  const unknown = listLabels(result.unknown);
+  return `${percent} · ${title} · Matcher: ${matched.join(', ') || 'ingen bekreftet'} · Mangler: ${missing.join(', ') || 'ingen bekreftet'} · Ukjent: ${unknown.join(', ') || 'ingen'}`;
+}
+
+export function normalizeAutomaticResult(result = {}, expectedItems = []) {
+  const criteria = Array.isArray(result.criteria) ? result.criteria.map((item) => ({ ...item })) : [];
+  const seen = new Set(criteria.map((item) => cleanText(item?.key, 80)).filter(Boolean));
+  const missingExpected = [];
+  for (const expected of Array.isArray(expectedItems) ? expectedItems : []) {
+    const key = cleanText(expected?.key, 80);
+    if (!key || seen.has(key)) continue;
+    missingExpected.push(key);
+    criteria.push({
+      key,
+      label: cleanText(expected?.label, 120) || 'Valgt preferanse',
+      status: 'unknown',
+      evidence: 'Kontrollgrunnlaget manglet dette valgte kravet, så det er ikke regnet som oppfylt.',
+      source: 'unknown',
+      confidence: 'ukjent',
+    });
+  }
+  const has = criteria.filter((item) => item?.status === 'met').map((item) => item.label);
+  const missing = criteria.filter((item) => item?.status === 'not_met' || item?.status === 'partial').map((item) => item.label);
+  const unknown = criteria.filter((item) => !['met', 'not_met', 'partial'].includes(item?.status)).map((item) => item.label);
+  return {
+    ...result,
+    criteria,
+    has: criteria.length ? has : result.has,
+    missing: criteria.length ? missing : result.missing,
+    unknown: criteria.length ? unknown : result.unknown,
+    score: {
+      ...(result.score || {}),
+      percent: missingExpected.length ? null : result?.score?.percent,
+      criteria_complete: missingExpected.length === 0,
+    },
+  };
+}
+
+function formatPrice(value) {
+  const price = Number(value);
+  return Number.isFinite(price) && price > 0 ? `${Math.round(price).toLocaleString('nb-NO')} kr/mnd.` : 'Pris ukjent';
+}
+
+function formatDistance(value) {
+  const distance = Number(value);
+  if (!Number.isFinite(distance) || distance < 0) return null;
+  return distance < 1 ? `${Math.round(distance * 1000)} m til skole` : `${distance.toLocaleString('nb-NO', { maximumFractionDigits: 1 })} km til skole`;
+}
+
+function resultFact(text, documentRef) {
+  const item = documentRef.createElement('span');
+  item.textContent = text;
+  return item;
+}
+
+function evidenceRow(criterion, documentRef) {
+  const item = documentRef.createElement('li');
+  item.className = `external-auto-evidence is-${cleanText(criterion?.status, 20) || 'unknown'}`;
+  const header = documentRef.createElement('div');
+  const label = documentRef.createElement('strong');
+  label.textContent = cleanText(criterion?.label, 120) || 'Kriterium';
+  const state = documentRef.createElement('span');
+  state.textContent = criterion?.status === 'met' ? 'Matcher'
+    : criterion?.status === 'not_met' ? 'Mangler'
+      : criterion?.status === 'partial' ? 'Delvis' : 'Ukjent';
+  header.append(label, state);
+  const explanation = documentRef.createElement('p');
+  explanation.textContent = cleanText(criterion?.evidence, 360) || 'Ingen pålitelig dokumentasjon funnet.';
+  const source = documentRef.createElement('small');
+  source.textContent = SOURCE_LABELS[criterion?.source] || 'Grunnlag ikke oppgitt';
+  if (criterion?.confidence) source.textContent += ` · ${cleanText(criterion.confidence, 20)} sikkerhet`;
+  item.append(header, explanation, source);
+  return item;
+}
+
+function resultCard(result, allowedDomains, allowedImageHosts, documentRef) {
+  const url = safeResultUrl(result?.url, allowedDomains);
+  if (!url) return null;
+  const card = documentRef.createElement('article');
+  card.className = 'external-auto-card';
+
+  const media = documentRef.createElement('div');
+  media.className = 'external-auto-card-media';
+  const imageUrl = result?.image?.verified_same_listing === true
+    ? safeImageUrl(result.image.thumbnail_url || result.image.url, allowedImageHosts) : null;
+  if (imageUrl) {
+    const image = documentRef.createElement('img');
+    image.src = imageUrl;
+    image.alt = cleanText(result.image.alt, 180) || `Boligbilde for ${cleanText(result.title, 100)}`;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.referrerPolicy = 'no-referrer';
+    image.addEventListener('error', () => {
+      const placeholder = documentRef.createElement('div');
+      placeholder.className = 'external-auto-image-missing';
+      placeholder.textContent = 'Boligbildet kunne ikke lastes';
+      image.replaceWith(placeholder);
+    }, { once: true });
+    media.append(image);
+  } else {
+    const placeholder = documentRef.createElement('div');
+    placeholder.className = 'external-auto-image-missing';
+    placeholder.textContent = 'Bilde kunne ikke knyttes sikkert til annonsen';
+    media.append(placeholder);
+  }
+  const score = documentRef.createElement('div');
+  score.className = 'external-auto-score';
+  const scoreValue = Number.isInteger(result?.score?.percent) ? result.score.percent : null;
+  const scoreStrong = documentRef.createElement('strong');
+  scoreStrong.textContent = scoreValue === null ? '–' : String(scoreValue);
+  const scoreLabel = documentRef.createElement('span');
+  scoreLabel.textContent = scoreValue === null ? 'match ukjent' : '% match';
+  score.append(scoreStrong, scoreLabel);
+  media.append(score);
+
+  const body = documentRef.createElement('div');
+  body.className = 'external-auto-card-body';
+  const provider = documentRef.createElement('p');
+  provider.className = 'external-auto-provider';
+  provider.textContent = cleanText(result.provider, 80) || new URL(url).hostname;
+  const title = documentRef.createElement('h4');
+  title.textContent = cleanText(result.title, 160) || 'Boligforslag';
+  const location = documentRef.createElement('p');
+  location.className = 'external-auto-location';
+  location.textContent = cleanText(result.location, 180) || 'Beliggenhet ikke sikkert oppgitt';
+
+  const facts = documentRef.createElement('div');
+  facts.className = 'external-auto-facts';
+  facts.append(resultFact(formatPrice(result.price_nok), documentRef));
+  facts.append(resultFact(activeStatusText(result.active_status), documentRef));
+  const transit = Number(result.transit_minutes);
+  if (Number.isFinite(transit) && transit >= 0) facts.append(resultFact(`${Math.round(transit)} min til kollektivt`, documentRef));
+  const distance = formatDistance(result.distance_to_school_km);
+  if (distance) facts.append(resultFact(distance, documentRef));
+  const coverage = Number(result?.score?.coverage_percent);
+  if (Number.isFinite(coverage)) facts.append(resultFact(`${Math.round(coverage)} % kontrollert`, documentRef));
+
+  const quick = documentRef.createElement('div');
+  quick.className = 'external-auto-quick';
+  [['Matcher', result.has, 'is-met'], ['Mangler', result.missing, 'is-missing'], ['Ukjent', result.unknown, 'is-unknown']].forEach(([heading, entries, className]) => {
+    const section = documentRef.createElement('section');
+    section.className = className;
+    const strong = documentRef.createElement('strong');
+    strong.textContent = heading;
+    const text = documentRef.createElement('p');
+    text.textContent = listLabels(entries).join(' · ') || (heading === 'Ukjent' ? 'Ingen' : 'Ingen bekreftet');
+    section.append(strong, text);
+    quick.append(section);
+  });
+
+  const details = documentRef.createElement('details');
+  details.className = 'external-auto-details';
+  const detailsSummary = documentRef.createElement('summary');
+  detailsSummary.textContent = 'Se kontroll av alle preferanser';
+  const criteria = documentRef.createElement('ul');
+  (Array.isArray(result.criteria) ? result.criteria : []).forEach((criterion) => criteria.append(evidenceRow(criterion, documentRef)));
+  details.append(detailsSummary, criteria);
+
+  const link = documentRef.createElement('a');
+  link.className = 'external-auto-source-link';
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = `Åpne annonsen hos ${cleanText(result.provider, 80) || 'kilden'} ↗`;
+  link.setAttribute('aria-label', `${link.textContent} – ${scoreValue === null ? 'match ukjent' : `${scoreValue} prosent match`} – åpnes i ny fane`);
+
+  const line = documentRef.createElement('p');
+  line.className = 'external-auto-readable-line';
+  line.textContent = formatAutomaticResultLine(result);
+  body.append(provider, title, location, facts, quick, details, link, line);
+  card.append(media, body);
+  return card;
+}
+
+export function renderAutomaticSearchResults(payload, documentRef = document, expectedItems = []) {
+  const section = documentRef.getElementById('external-auto-result');
+  const resultsTarget = documentRef.getElementById('external-auto-results');
+  const summary = documentRef.getElementById('external-auto-summary');
+  const searchedAt = documentRef.getElementById('external-auto-searched-at');
+  const warningsTarget = documentRef.getElementById('external-auto-warnings');
+  if (!section || !resultsTarget) return 0;
+  const allowedDomains = Array.isArray(payload?.allowed_source_domains) ? payload.allowed_source_domains : [];
+  const allowedImageHosts = Array.isArray(payload?.allowed_image_hosts) ? payload.allowed_image_hosts : [];
+  const results = (Array.isArray(payload?.results) ? payload.results : [])
+    .map((result) => normalizeAutomaticResult(result, expectedItems))
+    .slice(0, 8)
+    .sort((a, b) => Number(b?.score?.percent || 0) - Number(a?.score?.percent || 0));
+  resultsTarget.replaceChildren();
+  let rendered = 0;
+  results.forEach((result) => {
+    const card = resultCard(result, allowedDomains, allowedImageHosts, documentRef);
+    if (!card) return;
+    resultsTarget.append(card);
+    rendered += 1;
+  });
+  if (!rendered) {
+    const empty = documentRef.createElement('div');
+    empty.className = 'external-auto-empty';
+    empty.textContent = 'Ingen sikre annonselenker ble funnet denne gangen. Prøv et større område eller en litt høyere makspris.';
+    resultsTarget.append(empty);
+  }
+  if (summary) {
+    const checked = Number(payload?.searched_count || results.length);
+    const relaxed = payload?.search_mode === 'broadened' ? ' Søket ble utvidet for å finne de nærmeste alternativene.' : '';
+    summary.textContent = `${rendered} forslag vist av ${Math.max(checked, rendered)} kontrollerte kildelenker.${relaxed}`;
+  }
+  if (searchedAt) {
+    const date = new Date(payload?.searched_at || '');
+    searchedAt.textContent = Number.isFinite(date.getTime())
+      ? `Sjekket ${date.toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short' })}` : '';
+  }
+  if (warningsTarget) {
+    warningsTarget.replaceChildren();
+    const warnings = [...(Array.isArray(payload?.warnings) ? payload.warnings : [])];
+    if (results.some((result) => result?.score?.criteria_complete === false)) {
+      warnings.unshift('Minst ett forslag manglet kontroll av et valgt krav. Matchprosenten er derfor skjult for det forslaget.');
+    }
+    warnings.slice(0, 6).forEach((warning) => {
+      const row = documentRef.createElement('p');
+      row.textContent = cleanText(warning, 360);
+      warningsTarget.append(row);
+    });
+  }
+  section.classList.remove('hidden');
+  section.focus({ preventScroll: true });
+  section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return rendered;
 }
 
 function renderPreferenceList(filters, documentRef = document) {
   const model = preferencePresentation(filters);
-  const list = documentRef.getElementById('external-check-preference-list');
-  const status = documentRef.getElementById('external-check-preference-status');
+  const list = documentRef.getElementById('automatic-check-preference-list');
+  const status = documentRef.getElementById('automatic-check-preference-status');
   if (list) {
     list.replaceChildren();
     model.items.forEach((item) => {
@@ -157,201 +396,13 @@ function renderPreferenceList(filters, documentRef = document) {
     });
   }
   if (status) {
-    status.textContent = model.hasScoreBasis
-      ? `${model.items.length} kriterier tas med. Ukjent teller ikke som treff og vises separat.`
-      : 'Velg minst to preferanser, eller én skole, i søket over.';
+    status.textContent = model.schoolNeedsSelection
+      ? 'Velg skolen fra forslagslisten slik at avstanden kan kontrolleres.'
+      : model.hasScoreBasis
+      ? `${model.items.length} ${model.items.length === 1 ? 'kriterium kontrolleres' : 'kriterier kontrolleres'} per forslag. Krav uten sikkert bevis vises som «Ukjent».`
+      : 'Velg minst én preferanse i søket over.';
   }
-  const selectedLifestyle = new Set(model.preferences.lifestyle_tags);
-  documentRef.querySelectorAll?.('[name="advertisedClaims"]').forEach((input) => {
-    const enabled = selectedLifestyle.has(input.value);
-    input.disabled = !enabled;
-    if (!enabled) input.checked = false;
-    input.closest('label')?.classList.toggle('is-disabled', !enabled);
-  });
   return model;
-}
-
-async function decodeImage(file) {
-  if ('createImageBitmap' in window) return createImageBitmap(file);
-  const objectUrl = URL.createObjectURL(file);
-  try {
-    const image = new Image();
-    image.decoding = 'async';
-    image.src = objectUrl;
-    await image.decode();
-    return image;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
-
-function canvasBlob(canvas, quality) {
-  return new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
-}
-
-async function compressImage(file) {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > MAX_SOURCE_IMAGE_BYTES) {
-    throw new Error('Velg JPG-, PNG- eller WebP-bilder på maksimalt 12 MB.');
-  }
-  const image = await decodeImage(file);
-  const sourceWidth = Number(image.width);
-  const sourceHeight = Number(image.height);
-  if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth < 256 || sourceHeight < 256) {
-    image.close?.();
-    throw new Error('Bildene må være minst 256 × 256 piksler.');
-  }
-  const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(sourceWidth, sourceHeight));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(sourceWidth * scale));
-  canvas.height = Math.max(1, Math.round(sourceHeight * scale));
-  const context = canvas.getContext('2d', { alpha: false });
-  if (!context) {
-    image.close?.();
-    throw new Error('Nettleseren kunne ikke klargjøre bildet.');
-  }
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  image.close?.();
-  let blob = await canvasBlob(canvas, 0.82);
-  if (blob && blob.size > MAX_OUTPUT_IMAGE_BYTES) blob = await canvasBlob(canvas, 0.68);
-  if (!blob || blob.size > MAX_OUTPUT_IMAGE_BYTES) throw new Error('Bildet er fortsatt for stort etter skalering. Velg et mindre utsnitt.');
-  return blob;
-}
-
-function safeGoogleMapsUrl(value) {
-  try {
-    const url = new URL(String(value || ''));
-    const allowed = url.protocol === 'https:' && !url.username && !url.password
-      && (url.hostname === 'maps.google.com'
-        || (['www.google.com', 'www.google.no'].includes(url.hostname) && url.pathname.startsWith('/maps')));
-    return allowed ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-function safeHttpsUrl(value) {
-  try {
-    const url = new URL(String(value || ''));
-    return url.protocol === 'https:' && !url.username && !url.password ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-function criterionNode(criterion, documentRef) {
-  const item = documentRef.createElement('li');
-  item.className = 'external-result-item';
-  const header = documentRef.createElement('div');
-  header.className = 'external-result-item-header';
-  const title = documentRef.createElement('strong');
-  title.textContent = cleanText(criterion.label, 120) || 'Kriterium';
-  const value = documentRef.createElement('span');
-  value.textContent = typeof criterion.percentage === 'number' ? `${criterion.percentage}%` : 'Ukjent';
-  header.append(title, value);
-  const evidence = documentRef.createElement('p');
-  evidence.textContent = cleanText(criterion.evidence, 360) || 'Ingen forklaring tilgjengelig.';
-  const source = documentRef.createElement('span');
-  source.className = 'external-result-source';
-  source.textContent = SOURCE_LABELS[criterion.source] || 'Kilde ukjent';
-  item.append(header, evidence, source);
-  const detailsUrl = safeGoogleMapsUrl(criterion.details_url);
-  if (detailsUrl) {
-    const link = documentRef.createElement('a');
-    link.href = detailsUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.className = 'external-result-source';
-    link.textContent = 'Åpne treff i Google Maps ↗';
-    item.append(link);
-  }
-  if (criterion.caveat) {
-    const caveat = documentRef.createElement('p');
-    caveat.textContent = cleanText(criterion.caveat, 260);
-    item.append(caveat);
-  }
-  return item;
-}
-
-function renderCriterionGroup(target, criteria, documentRef) {
-  target.replaceChildren();
-  if (!criteria.length) {
-    const empty = documentRef.createElement('li');
-    empty.className = 'external-result-empty';
-    empty.textContent = 'Ingen kriterier i denne gruppen.';
-    target.append(empty);
-    return;
-  }
-  criteria.forEach((criterion) => target.append(criterionNode(criterion, documentRef)));
-}
-
-export function renderExternalAnalysisResult(result, documentRef = document) {
-  const section = documentRef.getElementById('external-check-result');
-  const score = documentRef.getElementById('external-result-score');
-  const coverage = documentRef.getElementById('external-result-coverage');
-  const sourceLink = documentRef.getElementById('external-result-source-link');
-  const metTarget = documentRef.getElementById('external-result-met');
-  const missingTarget = documentRef.getElementById('external-result-missing');
-  const unknownTarget = documentRef.getElementById('external-result-unknown');
-  const warningsTarget = documentRef.getElementById('external-result-warnings');
-  const mapsAttribution = documentRef.getElementById('external-result-maps-attribution');
-  const thirdPartyAttribution = documentRef.getElementById('external-result-third-party-attribution');
-  const criteria = Array.isArray(result?.criteria) ? result.criteria : [];
-  const met = criteria.filter((item) => item?.status === 'met');
-  const missing = criteria.filter((item) => ['partial', 'not_met'].includes(item?.status));
-  const unknown = criteria.filter((item) => item?.status === 'unknown');
-
-  if (score) score.textContent = Number.isInteger(result?.score?.percent) ? String(result.score.percent) : '–';
-  if (coverage) {
-    const verified = Number(result?.score?.verified_count || 0);
-    const selected = Number(result?.score?.selected_count || criteria.length);
-    const percent = Number(result?.score?.coverage_percent || 0);
-    coverage.textContent = `${verified} av ${selected} kriterier kontrollert · ${percent}% dekning. Ukjent gir ikke poeng.`;
-  }
-  if (sourceLink) {
-    const validSource = validateFinnListingUrl(result?.source?.url);
-    if (validSource) {
-      sourceLink.href = validSource;
-      sourceLink.classList.remove('hidden');
-    } else {
-      sourceLink.removeAttribute('href');
-      sourceLink.classList.add('hidden');
-    }
-  }
-  if (metTarget) renderCriterionGroup(metTarget, met, documentRef);
-  if (missingTarget) renderCriterionGroup(missingTarget, missing, documentRef);
-  if (unknownTarget) renderCriterionGroup(unknownTarget, unknown, documentRef);
-  mapsAttribution?.classList.toggle('hidden', !criteria.some((item) => item?.source === 'google_maps'));
-  if (thirdPartyAttribution) {
-    thirdPartyAttribution.replaceChildren();
-    (Array.isArray(result?.maps?.data_attributions) ? result.maps.data_attributions : []).slice(0, 5).forEach((attribution) => {
-      const provider = cleanText(attribution?.provider, 100);
-      if (!provider) return;
-      thirdPartyAttribution.append(documentRef.createTextNode(` · Data: `));
-      const providerUrl = safeHttpsUrl(attribution?.provider_url);
-      if (providerUrl) {
-        const link = documentRef.createElement('a');
-        link.href = providerUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = provider;
-        thirdPartyAttribution.append(link);
-      } else {
-        thirdPartyAttribution.append(documentRef.createTextNode(provider));
-      }
-    });
-  }
-
-  if (warningsTarget) {
-    warningsTarget.replaceChildren();
-    (Array.isArray(result?.warnings) ? result.warnings : []).slice(0, 6).forEach((warning) => {
-      const text = documentRef.createElement('p');
-      text.textContent = cleanText(warning, 360);
-      warningsTarget.append(text);
-    });
-  }
-  section?.classList.remove('hidden');
-  section?.focus({ preventScroll: true });
-  section?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 async function functionErrorMessage(error, data) {
@@ -362,155 +413,76 @@ async function functionErrorMessage(error, data) {
       const payload = await response.clone().json();
       if (payload?.message) return cleanText(payload.message, 260);
     } catch {
-      // Providerdetaljer og rå respons skal ikke vises i klienten.
+      // Rå leverandørrespons skal ikke vises i klienten.
     }
   }
-  return 'Kontrollen kunne ikke fullføres akkurat nå. Prøv igjen senere.';
+  return 'Boligsøket kunne ikke fullføres akkurat nå. Prøv igjen litt senere.';
 }
 
-export function initExternalListingCheck({ getFilters, openLogin, showToast, documentRef = document } = {}) {
+export function initExternalListingSearch({ getFilters, openLogin, showToast, documentRef = document } = {}) {
   const panel = documentRef.getElementById('external-listing-check');
-  const form = documentRef.getElementById('external-listing-check-form');
-  const imageInput = documentRef.getElementById('external-images');
-  const previewTarget = documentRef.getElementById('external-image-previews');
-  const submitButton = documentRef.getElementById('external-check-submit');
-  const status = documentRef.getElementById('external-check-status');
+  const submitButton = documentRef.getElementById('external-auto-search-submit');
+  const status = documentRef.getElementById('external-auto-status');
   let signedInUser = null;
-  let chosenFiles = [];
-  let previewUrls = [];
-
-  const clearPreviewUrls = () => {
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    previewUrls = [];
-  };
-
-  const renderPreviews = () => {
-    clearPreviewUrls();
-    previewTarget?.replaceChildren();
-    chosenFiles.forEach((file, index) => {
-      const frame = documentRef.createElement('div');
-      frame.className = 'external-image-preview';
-      const image = documentRef.createElement('img');
-      const objectUrl = URL.createObjectURL(file);
-      previewUrls.push(objectUrl);
-      image.src = objectUrl;
-      image.alt = `Valgt boligbilde ${index + 1}`;
-      const remove = documentRef.createElement('button');
-      remove.type = 'button';
-      remove.dataset.removeImage = String(index);
-      remove.setAttribute('aria-label', `Fjern boligbilde ${index + 1}`);
-      remove.textContent = '×';
-      frame.append(image, remove);
-      previewTarget?.append(frame);
-    });
-  };
-
-  imageInput?.addEventListener('change', () => {
-    const files = Array.from(imageInput.files || []);
-    if (files.length > MAX_IMAGES) showToast?.('Du kan kontrollere opptil tre bilder om gangen.', 'error');
-    chosenFiles = files.slice(0, MAX_IMAGES);
-    renderPreviews();
-  });
-
-  previewTarget?.addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-remove-image]');
-    if (!button) return;
-    chosenFiles.splice(Number(button.dataset.removeImage), 1);
-    if (imageInput) imageInput.value = '';
-    renderPreviews();
-  });
 
   const refreshPreferences = () => renderPreferenceList(getFilters?.() || {}, documentRef);
   panel?.addEventListener('toggle', () => { if (panel.open) refreshPreferences(); });
-
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
+  const startSearch = async () => {
     if (!signedInUser) {
-      status.textContent = 'Logg inn for å starte kontrollen.';
+      if (status) status.textContent = 'Logg inn for å la AI finne og kontrollere boligforslag.';
       openLogin?.();
       return;
     }
-    if (!form.reportValidity()) return;
-    const preferenceModel = refreshPreferences();
-    if (!preferenceModel.hasScoreBasis) {
-      status.textContent = 'Velg minst to preferanser, eller én skole, i søket over først.';
+    const model = refreshPreferences();
+    if (model.schoolNeedsSelection) {
+      if (status) status.textContent = 'Velg skolen fra forslagslisten før du starter, så skoleavstanden blir med.';
+      documentRef.getElementById('f-school')?.focus();
       return;
     }
-    const advertisedClaims = Array.from(form.querySelectorAll('[name="advertisedClaims"]:checked')).map((input) => input.value);
-    const payload = buildExternalAnalysisPayload(getFilters?.() || {}, {
-      sourceUrl: form.elements.sourceUrl.value,
-      address: form.elements.address.value,
-      monthlyPrice: form.elements.monthlyPrice.value,
-      propertyType: form.elements.propertyType.value,
-      moveInDate: form.elements.moveInDate.value,
-      acceptedOccupation: form.elements.acceptedOccupation.value,
-      advertisedClaims,
-      analysisConsent: form.elements.analysisConsent.checked,
-    });
-    if (!payload.source_url) {
-      status.textContent = 'Bruk en gyldig https-lenke til en konkret FINN eiendomsannonse med finnkode.';
-      form.elements.sourceUrl.focus();
+    if (!model.hasScoreBasis) {
+      if (status) status.textContent = 'Velg minst én preferanse før du starter.';
+      documentRef.getElementById('filter-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    if (!payload.monthly_price || !payload.property_type || !payload.address) {
-      status.textContent = 'Kontroller adresse, månedspris og boligtype.';
-      return;
-    }
-    const needsImages = preferenceModel.needsImages || payload.advertised_claims.some((key) => VISUAL_LIFESTYLE.has(key));
-    if (needsImages && chosenFiles.length === 0) {
-      status.textContent = 'Legg til minst ett rent boligbilde for å kontrollere de valgte visuelle kvalitetene.';
-      imageInput?.focus();
-      return;
-    }
-
     submitButton.disabled = true;
-    submitButton.textContent = needsImages ? 'Klargjør bilder …' : 'Klargjør kontroll …';
-    status.textContent = needsImages
-      ? 'Bildene skaleres lokalt. Deretter kontrolleres adresse, ruter, fasiliteter og synlige boligtrekk.'
-      : 'Klargjør adresse, ruter, fasiliteter og oppgitte annonsefelt.';
-    documentRef.getElementById('external-check-result')?.classList.add('hidden');
+    submitButton.textContent = 'Finner og kontrollerer …';
+    if (status) status.textContent = 'Søker først presist og utvider automatisk hvis det er få treff. Dette kan ta litt tid.';
+    documentRef.getElementById('external-auto-result')?.classList.add('hidden');
     try {
-      const uploadedImages = [];
-      const filesForAnalysis = needsImages ? chosenFiles : [];
-      for (const file of filesForAnalysis) uploadedImages.push(await compressImage(file));
-      const body = new FormData();
-      body.append('payload', JSON.stringify(payload));
-      uploadedImages.forEach((blob, index) => body.append('images', blob, `bolig-${index + 1}.webp`));
-      submitButton.textContent = 'Kontrollerer …';
       const supabase = await getSupabase();
-      const { data, error } = await supabase.functions.invoke('analyze-external-listing', { body });
+      const { data, error } = await supabase.functions.invoke('find-listing-matches', {
+        body: buildAutomaticSearchPayload(getFilters?.() || {}),
+      });
       if (error || !data) {
-        status.textContent = await functionErrorMessage(error, data);
+        if (status) status.textContent = await functionErrorMessage(error, data);
         return;
       }
-      renderExternalAnalysisResult(data, documentRef);
-      status.textContent = 'Kontrollen er ferdig. Resultatet lagres ikke av KollektivMatch.';
+      const rendered = renderAutomaticSearchResults(data, documentRef, model.items);
+      if (status) status.textContent = rendered
+        ? `${rendered} boligforslag er rangert. Åpne detaljene for hele kontrollen.`
+        : 'Ingen sikre lenker denne gangen. Prøv et litt bredere område eller en høyere makspris.';
+      showToast?.(rendered ? `${rendered} boligforslag funnet og kontrollert.` : 'Ingen sikre boliglenker funnet.', rendered ? 'success' : 'error');
     } catch (error) {
-      status.textContent = cleanText(error?.message, 260) || 'Kontrollen kunne ikke fullføres.';
+      if (status) status.textContent = cleanText(error?.message, 260) || 'Boligsøket kunne ikke fullføres.';
     } finally {
       submitButton.disabled = false;
-      submitButton.textContent = 'Start kontrollen';
+      submitButton.textContent = 'Finn og sjekk boligforslag';
     }
-  });
-
-  window.addEventListener('pagehide', () => {
-    clearPreviewUrls();
-    chosenFiles = [];
-    form?.reset();
-    previewTarget?.replaceChildren();
-    documentRef.getElementById('external-check-result')?.classList.add('hidden');
-    ['external-result-met', 'external-result-missing', 'external-result-unknown', 'external-result-warnings']
-      .forEach((id) => documentRef.getElementById(id)?.replaceChildren());
-  });
+  };
+  submitButton?.addEventListener('click', startSearch);
   refreshPreferences();
 
   return {
     refreshPreferences,
+    startSearch,
     setUser(user) {
       signedInUser = user || null;
       if (status) status.textContent = signedInUser
-        ? 'Klar. Vanlig grense er 3 kontroller per time og 10 per døgn.'
-        : 'Du må være logget inn. Vanlig grense er 3 kontroller per time.';
+        ? 'Klar. Søket finner også nære alternativer og rangerer dem etter alle valgte krav.'
+        : 'Du må være logget inn. Resultater og kilder vises rett under knappen.';
     },
   };
 }
+
+// Alias så eldre sider ikke bryter mens frontend og server oppdateres sammen.
+export const initExternalListingCheck = initExternalListingSearch;

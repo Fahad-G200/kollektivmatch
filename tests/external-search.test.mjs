@@ -75,7 +75,7 @@ test('null minutter til kollektivtransport behandles som en valgt preferanse', (
   assert.match(model.searchPhrase, /maks 0 min til kollektivtransport/);
 });
 
-test('ekstern kontrolliste inneholder område, skole, transport, fasiliteter og boligkvaliteter', () => {
+test('den automatiske søkemodellen inneholder område, skole, transport, fasiliteter og boligkvaliteter', () => {
   const filters = {
     city: 'Majorstuen, Oslo',
     maxTransitMinutes: '8',
@@ -108,44 +108,23 @@ test('ekstern kontrolliste inneholder område, skole, transport, fasiliteter og 
     assert.match(model.searchPhrase, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 
-  const verificationList = {
-    children: [],
-    replaceChildren() { this.children = []; },
-    append(...children) { this.children.push(...children); },
-  };
-  const verification = { classList: { toggle() {} } };
+  const summary = { textContent: '' };
+  const detail = { textContent: '' };
   const documentRef = {
     getElementById(id) {
       return {
-        'external-verification': verification,
-        'external-verification-list': verificationList,
+        'external-search-summary': summary,
+        'external-search-detail': detail,
       }[id] || null;
-    },
-    createElement() {
-      return {
-        children: [],
-        textContent: '',
-        append(...children) { this.children.push(...children); },
-      };
     },
   };
 
   renderExternalSearch(filters, documentRef);
-  assert.deepEqual(
-    verificationList.children.map((row) => row.children[0].textContent),
-    [
-      'Område: Majorstuen, Oslo',
-      'Kollektivtransport: maks 8 min',
-      'Skoleavstand: Universitetet i Oslo',
-      'Fasiliteter: nær matbutikk, nær kollektivtransport',
-      'Boligkvaliteter: rolig miljø, stort rom',
-    ],
-    'Alle fem kategorier skal rendres i kontrollisten',
-  );
-  assert.ok(verificationList.children.every((row) => row.children[1].textContent === 'Må bekreftes'));
+  assert.equal(summary.textContent, '5 preferanser er klare for automatisk kontroll og rangering.');
+  assert.match(detail.textContent, /AI-søket bruker alle valgene/);
 });
 
-test('søkefrasen inkluderer hytte og valgene som må kontrolleres manuelt', () => {
+test('søkefrasen inkluderer hytte og alle valgte preferanser', () => {
   const phrase = buildExternalSearchPhrase({
     city: 'Trysil',
     propertyType: 'hytte',

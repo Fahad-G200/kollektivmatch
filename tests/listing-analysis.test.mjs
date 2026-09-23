@@ -131,8 +131,9 @@ test('Google Maps links use an exact host allowlist', () => {
   assert.doesNotMatch(edgeFunction, /\^www\\\.google\\\./);
 });
 
-test('external marketplaces remain link-only and privacy text documents providers', () => {
-  assert.match(indexHtml, /Vi leser ikke bilder eller annonsetekst automatisk fra FINN, Hybel\.no eller Facebook/);
+test('automatic marketplace search is explicit and privacy text documents providers', () => {
+  assert.match(indexHtml, /Automatisk boligjakt/);
+  assert.match(indexHtml, /Visuelle krav som moderne bad godkjennes bare når et bilde kan knyttes til den samme annonsen/);
   assert.match(privacy, /kan OpenAI brukes til bildeobservasjoner/);
   assert.match(privacy, /<span translate="no">Google Maps Platform<\/span>/);
   assert.match(privacy, /Google-treff og ruter lagres ikke i databasen/);

@@ -20,7 +20,12 @@
 --   migrations/2026-09-08_security_definer_execute_grants.sql
 --   migrations/2026-09-11_match_preference_coverage.sql
 --   migrations/2026-09-12_ai_listing_checks.sql
+--   migrations/2026-09-12_external_listing_analysis.sql
 --   migrations/2026-09-12_ai_listing_retention_cron.sql
+--   migrations/2026-09-12_external_listing_analysis_retention_cron.sql
+--   migrations/2026-09-20_automatic_listing_search.sql
+--   migrations/2026-09-20_supabase_advisor_hardening.sql
+--   migrations/2026-09-20_automatic_listing_search_retention_cron.sql
 --
 -- En full førstegangsinstallasjon som SLETTER ALLE DATA ligger bevisst i:
 --   schema_fresh_install_DELETES_ALL_DATA.sql

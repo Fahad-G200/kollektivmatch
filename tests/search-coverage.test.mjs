@@ -41,7 +41,7 @@ test('område, transport, fasiliteter og boligkvaliteter blir brukt som faktiske
   ]);
 });
 
-test('grensesnittet forklarer femdelte kontroller og ekstern manuell verifisering', () => {
+test('grensesnittet forklarer femdelte kontroller og automatisk ekstern verifisering', () => {
   const index = read('index.html');
   const external = read('external-search.js');
   const match = read('match.js');
@@ -50,7 +50,9 @@ test('grensesnittet forklarer femdelte kontroller og ekstern manuell verifiserin
     assert.match(match, new RegExp(`['\"]${label}['\"]`));
   }
   assert.match(index, /Alle valgte kriterier tas med/);
-  assert.match(index, /id="external-verification-list"/);
-  assert.match(external, /state\.textContent = 'Må bekreftes'/);
+  assert.match(index, /id="external-auto-search-submit"/);
+  assert.match(index, /område, pris, boligtype, innflytting, hverdag, transport, fasiliteter, skole og boligkvalitet/);
+  assert.match(external, /AI-søket bruker alle valgene/);
+  assert.doesNotMatch(external, /state\.textContent = 'Må bekreftes'/);
   assert.doesNotMatch(external, /coverage\s*:/);
 });

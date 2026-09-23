@@ -1,14 +1,13 @@
 // supabase-config.js
 //
-// Oppretter én delt Supabase-klient som resten av appen importerer.
-// Hent URL og anon key fra: Supabase Dashboard → Settings → API.
-// Den "anon" nøkkelen er trygg å ha i frontend-koden – tilgangen
-// styres uansett av RLS-policyene i database/schema.sql.
+// Verdiene settes av scripts/prepare-public.mjs under bygging. Dermed ligger
+// verken prosjekt-ID eller nøkkel i Git-historikken. Frontend bruker bare en
+// publishable key; datatilgang styres fortsatt av RLS-policyene i databasen.
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://wsfnnaiytweaarncewcr.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_zkVUCyW9fmJ9nEEVFJzCeg_UliKpxKl';
+const SUPABASE_URL = __SUPABASE_URL__;
+const SUPABASE_PUBLISHABLE_KEY = __SUPABASE_PUBLISHABLE_KEY__;
 
 // Google krever ekstern OAuth-konfigurasjon og er skjult til den er satt opp.
 // Se README.md før funksjonen aktiveres.
@@ -29,10 +28,8 @@ const authStorage = {
   },
 };
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    // PKCE keeps reusable credentials out of callback URLs. Session storage
-    // also limits how long a stolen browser profile can expose a live session.
     flowType: 'pkce',
     detectSessionInUrl: false,
     persistSession: true,

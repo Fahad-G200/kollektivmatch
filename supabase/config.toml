@@ -33,3 +33,6 @@ verify_jwt = true
 
 [functions.analyze-external-listing]
 verify_jwt = true
+
+[functions.find-listing-matches]
+verify_jwt = true

@@ -279,12 +279,6 @@ export function renderExternalSearch(filters = {}, documentRef = document) {
   const copyButton = documentRef.getElementById('copy-external-search');
   const summary = documentRef.getElementById('external-search-summary');
   const detail = documentRef.getElementById('external-search-detail');
-  const statusGrid = documentRef.getElementById('external-search-meter');
-  const exactCount = documentRef.getElementById('external-exact-count');
-  const keywordCount = documentRef.getElementById('external-keyword-count');
-  const manualCount = documentRef.getElementById('external-manual-count');
-  const verification = documentRef.getElementById('external-verification');
-  const verificationList = documentRef.getElementById('external-verification-list');
   const fallbackSearches = documentRef.getElementById('external-fallback-searches');
   const fallbackLinks = documentRef.getElementById('external-fallback-links');
   const fallbacks = buildFinnFallbackSearches(filters);
@@ -306,38 +300,16 @@ export function renderExternalSearch(filters = {}, documentRef = document) {
   fallbackSearches?.classList.toggle('hidden', fallbacks.length === 0);
 
   if (!model.activeCount) {
-    if (summary) summary.textContent = 'Velg sted, pris eller boligtype for å lage et mer presist FINN-søk.';
-    if (detail) detail.textContent = 'Uten filtre åpnes alle aktive utleieannonser.';
-    statusGrid?.classList.add('hidden');
-    verification?.classList.add('hidden');
+    if (summary) summary.textContent = 'Velg minst én preferanse for å finne og rangere boligforslag.';
+    if (detail) detail.textContent = 'Den eksterne FINN-lenken er tilgjengelig som et manuelt alternativ.';
     return model;
   }
 
   if (summary) {
-    summary.textContent = `${model.filteredCount} eksakte FINN-filtre · ${model.keywordCount} søkeord · ${model.verificationCount} kriterier må bekreftes i hver annonse.`;
+    summary.textContent = `${model.activeCount} preferanser er klare for automatisk kontroll og rangering.`;
   }
   if (detail) {
-    const filteredText = model.filteredLabel ? `Satt som filter hos FINN: ${model.filteredLabel}.` : '';
-    const keywordText = model.keywordLabel ? ` Sendt som søkeord, men ikke verifisert: ${model.keywordLabel}.` : '';
-    const remainingText = model.remainingLabel ? ` Ikke støttet som FINN-filter: ${model.remainingLabel}.` : '';
-    detail.textContent = `${filteredText}${keywordText}${remainingText}`.trim() || 'Ingen av valgene kan tas med automatisk.';
+    detail.textContent = 'AI-søket bruker alle valgene. FINN-knappen er et separat, manuelt søkealternativ.';
   }
-  statusGrid?.classList.remove('hidden');
-  if (exactCount) exactCount.textContent = String(model.filteredCount);
-  if (keywordCount) keywordCount.textContent = String(model.keywordCount);
-  if (manualCount) manualCount.textContent = String(model.verificationCount);
-  if (verificationList) {
-    verificationList.replaceChildren();
-    model.verificationItems.forEach((item) => {
-      const row = documentRef.createElement('li');
-      const value = documentRef.createElement('span');
-      const state = documentRef.createElement('strong');
-      value.textContent = `${item.label}: ${item.value}`;
-      state.textContent = 'Må bekreftes';
-      row.append(value, state);
-      verificationList.append(row);
-    });
-  }
-  verification?.classList.toggle('hidden', model.verificationCount === 0);
   return model;
 }

@@ -58,7 +58,7 @@ const frontendFiles = walk(root).filter((path) => {
     && /\.(?:html|js|css)$/.test(name);
 });
 const frontend = frontendFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
-assert.doesNotMatch(frontend, /VIPPS_CLIENT_SECRET|VIPPS_SUBSCRIPTION_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|SUPABASE_SERVICE_ROLE_KEY/);
+assert.doesNotMatch(frontend, /VIPPS_CLIENT_SECRET|VIPPS_SUBSCRIPTION_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS/);
 assert.doesNotMatch(frontend, /\.update\(\s*\{[^}]*is_featured/s);
 
 console.log('Betalingssikkerhet: 27 statiske kontroller besto.');

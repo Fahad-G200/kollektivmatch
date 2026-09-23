@@ -21,7 +21,7 @@ for (const { name, source } of migrations) {
   for (const match of source.matchAll(/^\s*security definer\s*$/gim)) {
     assert.match(
       source.slice(match.index, match.index + 140),
-      /set search_path = pg_catalog(?:, [a-z_]+)*/i,
+      /set search_path = (?:pg_catalog(?:, [a-z_]+)*|'')/i,
       `${name}: SECURITY DEFINER mangler fast search_path`,
     );
   }
@@ -88,7 +88,7 @@ assert.match(allMigrations, /revoke all on public\.boost_payment_admin_export fr
 assert.match(allMigrations, /grant select on public\.boost_payment_admin_export to service_role/i);
 assert.match(payment, /revoke all on function public\.create_boost_order\(uuid, uuid, text, text, text\)[\s\S]+to service_role/i);
 
-const migrationTail = /2026-09-01_reporting_hardening\.sql[\s\S]+2026-09-07_public_listing_access\.sql[\s\S]+2026-09-07_cabin_property_type\.sql[\s\S]+2026-09-08_security_definer_execute_grants\.sql/;
+const migrationTail = /2026-09-01_reporting_hardening\.sql[\s\S]+2026-09-07_public_listing_access\.sql[\s\S]+2026-09-07_cabin_property_type\.sql[\s\S]+2026-09-08_security_definer_execute_grants\.sql[\s\S]+2026-09-11_match_preference_coverage\.sql[\s\S]+2026-09-12_ai_listing_checks\.sql[\s\S]+2026-09-12_external_listing_analysis\.sql[\s\S]+2026-09-12_ai_listing_retention_cron\.sql[\s\S]+2026-09-12_external_listing_analysis_retention_cron\.sql[\s\S]+2026-09-20_automatic_listing_search\.sql[\s\S]+2026-09-20_supabase_advisor_hardening\.sql[\s\S]+2026-09-20_automatic_listing_search_retention_cron\.sql/;
 assert.match(schema, migrationTail);
 assert.match(readme, migrationTail);
 

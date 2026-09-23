@@ -12,8 +12,8 @@ import { ENABLE_GOOGLE_AUTH } from './supabase-config.js';
 import { loadListings, loadMoreListings, populateCitySuggestions } from './feed.js?v=20260912-2';
 import { openModal, closeModal, showToast } from './ui.js';
 import { searchSchools } from './location-utils.js?v=20260911-1';
-import { renderExternalSearch } from './external-search.js?v=20260912-3';
-import { initExternalListingCheck } from './external-listing-check.js?v=20260912-1';
+import { renderExternalSearch } from './external-search.js?v=20260920-2';
+import { initExternalListingSearch } from './external-listing-check.js?v=20260920-2';
 
 const authButtons = document.getElementById('auth-buttons');
 const userMenu = document.getElementById('user-menu');
@@ -31,7 +31,7 @@ const schoolStatus = document.getElementById('school-search-status');
 const clearSchoolButton = document.getElementById('clear-school');
 const advancedFilters = document.getElementById('advanced-filters');
 const advancedFilterCount = document.getElementById('advanced-filter-count');
-const externalListingCheck = initExternalListingCheck({
+const externalListingCheck = initExternalListingSearch({
   getFilters: () => getFiltersFromForm(),
   openLogin: () => {
     resetAuthModalView();
@@ -43,7 +43,7 @@ let registrationEmail = '';
 let resendTimer = null;
 let schoolSearchTimer = null;
 let schoolSearchController = null;
-const TERMS_VERSION = '2026-09-12';
+const TERMS_VERSION = '2026-09-20';
 const FILTER_LABELS = {
   propertyType: {
     leilighet: 'Leilighet', hybel: 'Hybel', enebolig: 'Enebolig',
@@ -528,7 +528,8 @@ async function submitFilters({ updateUrl = true } = {}) {
 filterForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!(await ensureSchoolSelection())) return;
-  submitFilters();
+  await submitFilters();
+  await externalListingCheck.startSearch();
 });
 
 document.getElementById('reset-filters')?.addEventListener('click', () => {
